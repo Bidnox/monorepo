@@ -10,7 +10,7 @@ type AssetBoxProps = {
 export function AssetBox({
   label,
   ratio = "16 / 9",
-  tone = "bg-neutral-200",
+  tone = "bg-muted",
   className,
 }: AssetBoxProps) {
   return (
@@ -22,7 +22,7 @@ export function AssetBox({
       )}
       style={{ aspectRatio: ratio }}
     >
-      <span className="rounded-md bg-black/8 px-2.5 py-1 text-[11px] font-semibold tracking-tight text-black/55">
+      <span className="rounded-md bg-background/80 px-2.5 py-1 text-[11px] font-semibold tracking-tight text-muted-foreground">
         {label} &middot; {ratio}
       </span>
     </div>

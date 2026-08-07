@@ -34,10 +34,10 @@ const GROUPS = [
 export function SiteFooter() {
   return (
     <footer className="px-6 pb-16">
-      <div className="mx-auto grid w-full max-w-295 gap-12 border-t border-black/8 pt-12 md:grid-cols-[1.6fr_repeat(3,1fr)]">
+      <div className="mx-auto grid w-full max-w-295 gap-12 border-t border-border pt-12 md:grid-cols-[1.6fr_repeat(3,1fr)]">
         <div>
           <p className="font-heading text-2xl tracking-tight uppercase">bidnox</p>
-          <p className="mt-3 max-w-56 text-[13px] leading-relaxed text-black/55">
+          <p className="mt-3 max-w-56 text-[13px] leading-relaxed text-muted-foreground">
             Sealed-bid invoice financing. Amounts stay encrypted until settlement.
           </p>
         </div>
@@ -50,7 +50,7 @@ export function SiteFooter() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-[13px] text-black/55 transition-colors hover:text-black"
+                    className="text-[13px] text-muted-foreground transition-colors hover:text-foreground"
                   >
                     {link.label}
                   </Link>
@@ -61,7 +61,7 @@ export function SiteFooter() {
         ))}
       </div>
 
-      <div className="mx-auto mt-12 flex w-full max-w-295 flex-col gap-1 text-[12px] text-black/40 sm:flex-row sm:justify-between">
+      <div className="mx-auto mt-12 flex w-full max-w-295 flex-col gap-1 text-[12px] text-muted-foreground sm:flex-row sm:justify-between">
         <span>
           &copy; {new Date().getFullYear()} {brand.name}
         </span>
