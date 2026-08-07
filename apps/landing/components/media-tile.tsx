@@ -19,6 +19,7 @@ export function MediaTile({ src, alt, ratio, priority, className }: MediaTilePro
       <Image
         src={src}
         alt={alt}
+        draggable={false}
         fill
         priority={priority}
         sizes="(max-width: 640px) 100vw, 50vw"

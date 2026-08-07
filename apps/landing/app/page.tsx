@@ -3,7 +3,6 @@ import Link from "next/link"
 
 import { AssetBox } from "@/components/asset-box"
 import { MediaTile } from "@/components/media-tile"
-import { PhoneFrame } from "@/components/phone-frame"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
 import {
@@ -16,52 +15,58 @@ import {
 const STEPS = [
   {
     src: "/assets/approved-invoice.png",
-    alt: "Approved invoice with live bids",
-    title: "List",
-    lines: ["Upload an approved invoice.", "Bidding opens the same day."],
+    alt: "Buyer-confirmed receivable ready for sealed bids",
+    title: "Confirm",
+    lines: ["Create the receivable.", "The buyer signs the exact terms."],
   },
   {
     src: "/assets/bids-leaderboard.png",
     alt: "Leaderboard of verified lenders bidding",
     title: "Bid",
-    lines: ["Banks, NBFCs and fintechs compete.", "No lender sees another bid."],
+    lines: [
+      "Banks, NBFCs and fintechs compete.",
+      "No lender sees another bid.",
+    ],
   },
   {
     src: "/assets/working-capital.png",
-    alt: "Working capital unlocked",
-    title: "Get funded",
-    lines: ["Take the best rate and settle.", "Losing bids stay sealed."],
+    alt: "Clean capital for a buyer-confirmed receivable",
+    title: "Settle",
+    lines: ["Recheck both parties.", "Move aUSDC to the seller."],
   },
 ]
 
 const ENABLES = [
   {
     src: "/assets/list-invoice.png",
-    alt: "List invoice options",
+    alt: "Bidnox receivable financing lifecycle",
     ratio: "4 / 3",
-    title: "Everything from one screen",
-    lines: ["Upload, request bids, pick a payout account.", "No spreadsheets, no phone calls."],
+    title: "One complete lifecycle",
+    lines: ["Create, confirm, check and bid.", "Then settle and repay."],
   },
   {
     src: "/assets/funding-options.png",
-    alt: "Funding routes from banks, NBFCs and the marketplace",
+    alt: "Cleanverse settlement preflight",
     ratio: "4 / 3",
-    title: "Every funding route open",
-    lines: ["Bank lines, NBFC funding, marketplace bids.", "All in one place."],
+    title: "Compliance before settlement",
+    lines: [
+      "Winner and seller rechecked.",
+      "aUSDC confirmed before value moves.",
+    ],
   },
   {
     src: "/assets/open-invoices.png",
-    alt: "Open invoices and buyer profile",
+    alt: "Live sealed receivable auctions",
     ratio: "5 / 4",
-    title: "Track what is open",
-    lines: ["Live rates, funding time, buyer terms.", "Per invoice, at a glance."],
+    title: "Track sealed auctions",
+    lines: ["See counts, not competing offers.", "Bid values remain private."],
   },
   {
     src: "/assets/bidder-card.png",
-    alt: "Bidnox bidder card",
+    alt: "Eligible financier entering a sealed auction",
     ratio: "5 / 4",
-    title: "Spend it the day it lands",
-    lines: ["A card on your funded balance.", "Withdraw to your bank whenever."],
+    title: "Only eligible financiers bid",
+    lines: ["A-Pass must be active.", "aUSDC eligibility is checked."],
   },
 ]
 
@@ -104,24 +109,28 @@ export default function Page() {
             see nothing
           </h1>
 
-          <div className="mx-auto mt-14 w-full max-w-80">
-            <PhoneFrame screenClassName="bg-background">
+          <div className="mx-auto mt-14 w-full max-w-[26rem]">
+            <div className="relative aspect-[719/1410] w-full">
               <Image
                 src="/app-screen/light-mode.png"
-                alt="Bidnox app home screen"
+                alt="Bidnox buyer-confirmed receivable and sealed auction"
+                draggable={false}
                 fill
                 priority
-                sizes="320px"
-                className="object-cover dark:hidden"
+                unoptimized
+                sizes="(max-width: 640px) calc(100vw - 3rem), 416px"
+                className="object-contain dark:hidden"
               />
               <Image
                 src="/app-screen/dark-mode.png"
                 alt=""
+                draggable={false}
                 fill
-                sizes="320px"
-                className="hidden object-cover dark:block"
+                unoptimized
+                sizes="(max-width: 640px) calc(100vw - 3rem), 416px"
+                className="hidden object-contain dark:block"
               />
-            </PhoneFrame>
+            </div>
           </div>
 
           <p className="mt-6 text-[13px] font-semibold">
@@ -182,7 +191,9 @@ export default function Page() {
                 <p className="font-heading text-[clamp(2.5rem,6vw,4.5rem)] leading-none tracking-[-0.03em]">
                   {stat.value}
                 </p>
-                <p className="mt-2 text-[13px] text-muted-foreground">{stat.label}</p>
+                <p className="mt-2 text-[13px] text-muted-foreground">
+                  {stat.label}
+                </p>
               </div>
             ))}
           </div>
@@ -198,27 +209,35 @@ export default function Page() {
 
             <div className="mt-8 grid gap-5 sm:grid-cols-2">
               <div>
-                <AssetBox label="Walkthrough video" ratio="16 / 9" tone="bg-muted" />
-                <p className="mt-4 text-[13px] font-semibold">Watch an auction close</p>
+                <AssetBox
+                  label="Walkthrough video"
+                  ratio="16 / 9"
+                  tone="bg-muted"
+                />
+                <p className="mt-4 text-[13px] font-semibold">
+                  Watch an auction close
+                </p>
                 <p className="text-[13px] text-muted-foreground">
                   Ninety seconds, listing to funded.
                 </p>
               </div>
               <div>
                 <div className="relative flex aspect-[16/9] w-full items-end justify-center overflow-hidden rounded-xl bg-neutral-900">
-                  <div className="w-[26%] translate-y-[14%]">
-                    <PhoneFrame island={false} screenClassName="bg-neutral-950">
-                      <Image
-                        src="/app-screen/dark-mode.png"
-                        alt="Bidnox app in dark mode"
-                        fill
-                        sizes="160px"
-                        className="object-cover"
-                      />
-                    </PhoneFrame>
+                  <div className="relative aspect-[719/1410] w-[38%] translate-y-[14%]">
+                    <Image
+                      src="/app-screen/dark-mode.png"
+                      alt="Bidnox app in dark mode"
+                      draggable={false}
+                      fill
+                      unoptimized
+                      sizes="180px"
+                      className="object-contain"
+                    />
                   </div>
                 </div>
-                <p className="mt-4 text-[13px] font-semibold">Every contract is public</p>
+                <p className="mt-4 text-[13px] font-semibold">
+                  Every contract is public
+                </p>
                 <p className="text-[13px] text-muted-foreground">
                   Read them, run them, try to break them.
                 </p>
@@ -234,7 +253,11 @@ export default function Page() {
             </h2>
             <Accordion className="w-full">
               {FAQ.map((item) => (
-                <AccordionItem key={item.q} value={item.q} className="border-border">
+                <AccordionItem
+                  key={item.q}
+                  value={item.q}
+                  className="border-border"
+                >
                   <AccordionTrigger className="text-[15px] font-semibold">
                     {item.q}
                   </AccordionTrigger>
@@ -255,8 +278,8 @@ export default function Page() {
               your pricing
             </h2>
             <p className="mx-auto mt-6 max-w-md text-[13px] text-primary-foreground/70">
-              Early access opens in batches. Tell us whether you are listing invoices or
-              funding them.
+              Early access opens in batches. Tell us whether you are listing
+              invoices or funding them.
             </p>
             <Link
               href="#cta"
