@@ -9,6 +9,7 @@
     --animate-toast-error-odd: toast-error-odd 0.28s cubic-bezier(0.5, 1, 0.89, 1);
     --animate-toast-error-even: toast-error-even 0.28s cubic-bezier(0.5, 1, 0.89, 1);
     --animate-caret-blink: 1s ease-out infinite caret-blink;
+    --animate-marquee: marquee 34s linear infinite;
     --font-heading: var(--font-heading);
     --font-mono: var(--font-mono);
     --font-sans: var(--font-sans);
@@ -60,6 +61,14 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+  @keyframes marquee {
+  from {
+    transform: translateX(0);
+        }
+  to {
+    transform: translateX(-50%);
+        }
+    }
   @keyframes skeleton {
   to {
     background-position: -200% 0;
