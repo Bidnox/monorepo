@@ -49,7 +49,7 @@ export function Logo({
   return (
     <div className={cn("flex items-center gap-2", className)} {...props}>
       <LogoMark mono={mono} />
-      <span className="font-mono text-base font-medium tracking-tighter lowercase">
+      <span className="text-base font-extrabold tracking-tight uppercase">
         bidnox
       </span>
       <span className="sr-only">Bidnox</span>

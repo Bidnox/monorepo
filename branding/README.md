@@ -4,14 +4,14 @@ Invoice rows with the total sealed. The rows sit back in grey so the emerald sea
 the thing you look at.
 
 Two kits, no light/dark split. Every colour is chosen to read on paper **and** on ink,
-so one file covers both. There is no wordmark lockup file: the wordmark is set in mono
-type by the app, so it always matches the surrounding UI.
+so one file covers both. There is no wordmark lockup file: the app sets the wordmark in
+type, so it always matches the surrounding UI.
 
 ```
 branding/
   colour/   mark.svg  mark.png  tile.svg  tile.png  tile-bleed.svg  apple-icon.png
   mono/     mark.svg  mark.png  tile.svg  tile.png  tile-bleed.svg  apple-icon.png
-  social/   og.png
+  social/   og.jpg  og-source.png
   preview.png
 ```
 
@@ -40,10 +40,14 @@ mark sits on emerald, on a photo, or over video.
 | One colour, or on emerald / photos | `mono/mark.svg`, `mono/mark.png` |
 | Favicon, PWA, browser tab | `colour/tile.svg` &rarr; shipped as `apps/*/app/icon.svg` |
 | iOS home screen | `colour/apple-icon.png` (full bleed, no radius) |
-| Social cards | `social/og.png` |
+| Social cards | `social/og.jpg` |
 | Everything at a glance | `preview.png` |
 
-PNG sizes: marks 1024x1024 transparent, tiles 512x512, apple icons 180x180, og 1200x630.
+PNG sizes: marks 1024x1024 transparent, tiles 512x512, apple icons 180x180.
+
+The social card is `social/og.jpg`, 1200x675, served from both apps at `/og.jpg`. The
+master lives beside it as `social/og-source.png` at 1672x941; regenerate the jpg from it
+with `sips -s format jpeg -s formatOptions 86 --resampleHeightWidth 675 1200`.
 
 ## In the apps
 

@@ -19,9 +19,9 @@ const summary =
   "Bid on invoices without revealing your numbers. Amounts stay encrypted until settlement."
 
 const ogImage = {
-  url: "/og.png",
+  url: "/og.jpg",
   width: 1200,
-  height: 630,
+  height: 675,
   alt: `${brand.name}, private invoice bidding`,
 }
 
