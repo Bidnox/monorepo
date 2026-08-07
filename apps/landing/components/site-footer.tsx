@@ -1,10 +1,9 @@
-import { brand, social } from "@bidnox/site-config"
+import { brand, sites, social } from "@bidnox/site-config"
 import Link from "next/link"
 
 const LINKS = [
   { label: "How it works", href: "#how" },
-  { label: "Docs", href: "#faq" },
-  { label: "Contracts", href: social.github },
+  { label: "Launch app", href: sites.app.url },
   { label: "GitHub", href: social.github },
   { label: "X", href: social.x },
 ]

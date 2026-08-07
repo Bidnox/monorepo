@@ -1,6 +1,6 @@
 import Link from "next/link"
 
-import { social } from "@bidnox/site-config"
+import { sites, social } from "@bidnox/site-config"
 
 export function SiteHeader() {
   return (
@@ -22,10 +22,10 @@ export function SiteHeader() {
         </div>
 
         <Link
-          href="#cta"
+          href={sites.app.url}
           className="rounded-full bg-brand px-4 py-2 text-[13px] font-semibold text-brand-foreground transition-colors hover:opacity-90"
         >
-          Get early access
+          Launch app
         </Link>
       </div>
     </div>

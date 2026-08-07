@@ -1,5 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
+import { sites } from "@bidnox/site-config"
 
 import { AssetBox } from "@/components/asset-box"
 import { MediaTile } from "@/components/media-tile"
@@ -278,14 +279,13 @@ export default function Page() {
               your pricing
             </h2>
             <p className="mx-auto mt-6 max-w-md text-[13px] text-primary-foreground/70">
-              Early access opens in batches. Tell us whether you are listing
-              invoices or funding them.
+              Choose your view and enter the private invoice marketplace.
             </p>
             <Link
-              href="#cta"
+              href={sites.app.url}
               className="mt-8 inline-flex rounded-full bg-brand px-6 py-3 text-[13px] font-semibold text-brand-foreground transition-transform hover:-translate-y-0.5"
             >
-              Get early access
+              Launch app
             </Link>
           </div>
         </section>

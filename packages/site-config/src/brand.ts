@@ -1,7 +1,7 @@
 export const brand = {
   name: "bidnox",
   x: "vwakesahu",
-  github: "vwakesahu",
+  github: "Bidnox/monorepo",
   colors: {
     row: "#71717a",
     seal: "#10b981",
