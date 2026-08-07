@@ -14,7 +14,7 @@ export function SiteFooter() {
     <footer className="px-6 pb-16">
       <div className="mx-auto grid w-full max-w-295 gap-10 border-t border-border pt-12 md:grid-cols-[1.2fr_1fr] md:items-start">
         <div>
-          <p className="font-heading text-2xl tracking-tight uppercase">bidnox</p>
+          <p className="font-heading text-2xl tracking-tight">bidnox</p>
           <p className="mt-3 max-w-56 text-[13px] leading-relaxed text-muted-foreground">
             Sealed-bid invoice financing. Amounts stay encrypted until settlement.
           </p>

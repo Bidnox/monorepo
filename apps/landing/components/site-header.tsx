@@ -6,7 +6,7 @@ export function SiteHeader() {
   return (
     <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4">
       <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-border bg-card/95 p-1.5 pl-4 shadow-xs backdrop-blur">
-        <Link href="/" className="font-heading text-base tracking-tight uppercase">
+        <Link href="/" className="font-heading text-base tracking-tight">
           bidnox
         </Link>
 

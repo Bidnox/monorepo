@@ -24,7 +24,7 @@ export default function NotFound() {
           />
         </div>
 
-        <p className="mt-7 text-xs font-medium tracking-widest text-muted-foreground uppercase">
+        <p className="mt-7 text-xs font-medium text-muted-foreground">
           Error 404
         </p>
         <h1 className="mt-2 text-2xl font-medium tracking-tight">

@@ -7,8 +7,10 @@ import { usePathname } from "next/navigation"
 import { useTheme } from "next-themes"
 import {
   Activity,
+  Factory,
   FilePlus2,
   Files,
+  Landmark,
   LayoutDashboard,
   LogOut,
   Moon,
@@ -18,6 +20,10 @@ import {
 import { useDisconnect } from "wagmi"
 
 import { Logo } from "@/components/logo"
+import {
+  type AppRole,
+  RoleOnboarding,
+} from "@/components/role-onboarding"
 import {
   CleanverseStatus,
   CopyableAddress,
@@ -45,22 +51,34 @@ import { Switch } from "@/components/ui/switch"
 import { ToastProvider } from "@/components/ui/toast"
 import { baseSepolia } from "@/lib/wagmi"
 
-const NAVIGATION = [
-  { href: "/", label: "Overview", icon: LayoutDashboard, exact: true },
-  {
-    href: "/receivables",
-    label: "Receivables",
-    icon: Files,
-    exact: false,
-  },
-  {
-    href: "/receivables/new",
-    label: "Create receivable",
-    icon: FilePlus2,
-    exact: true,
-  },
-  { href: "/activity", label: "Activity", icon: Activity, exact: false },
-] as const
+const NAVIGATION = {
+  supplier: [
+    { href: "/", label: "Overview", icon: LayoutDashboard, exact: true },
+    {
+      href: "/receivables",
+      label: "Receivables",
+      icon: Files,
+      exact: false,
+    },
+    {
+      href: "/receivables/new",
+      label: "Create receivable",
+      icon: FilePlus2,
+      exact: true,
+    },
+    { href: "/activity", label: "Activity", icon: Activity, exact: false },
+  ],
+  financier: [
+    { href: "/", label: "Overview", icon: LayoutDashboard, exact: true },
+    {
+      href: "/receivables",
+      label: "Opportunities",
+      icon: Files,
+      exact: false,
+    },
+    { href: "/activity", label: "Activity", icon: Activity, exact: false },
+  ],
+} as const
 
 const subscribe = () => () => undefined
 const getClientSnapshot = () => true
@@ -72,12 +90,14 @@ function shortAddress(address: string) {
 
 export function AppSidebar({
   walletAddress,
+  role,
   wrongNetwork,
   onConnect,
   onSwitchNetwork,
   onDisconnect,
 }: {
   walletAddress: string | null
+  role: AppRole | null
   wrongNetwork: boolean
   onConnect: () => void
   onSwitchNetwork: () => void
@@ -104,7 +124,7 @@ export function AppSidebar({
         <SidebarGroup className="px-3">
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAVIGATION.map((item) => {
+              {(role ? NAVIGATION[role] : NAVIGATION.supplier).map((item) => {
                 const active =
                   item.href === "/receivables"
                     ? pathname === item.href ||
@@ -238,46 +258,133 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             connected &&
               (chain?.unsupported || chain?.id !== baseSepolia.id)
           )
-          const walletAddress = connected ? (account?.address ?? null) : null
-
           return (
-            <SidebarProvider
-              style={{ "--sidebar-width": "14.5rem" } as React.CSSProperties}
+            <AppExperience
+              mounted={mounted}
+              walletAddress={connected ? (account?.address ?? null) : null}
+              wrongNetwork={wrongNetwork}
+              onConnect={() => openConnectModal?.()}
+              onSwitchNetwork={() => openChainModal?.()}
+              onDisconnect={() => disconnect()}
             >
-              <AppSidebar
-                walletAddress={walletAddress}
-                wrongNetwork={wrongNetwork}
-                onConnect={() => openConnectModal?.()}
-                onSwitchNetwork={() => openChainModal?.()}
-                onDisconnect={() => disconnect()}
-              />
-              <SidebarInset>
-                <div className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur md:hidden">
-                  <SidebarTrigger />
-                  <Logo mono />
-                </div>
-                <div className="mx-auto w-full max-w-[1240px] flex-1 px-4 py-8 md:px-8 md:py-10">
-                  {!mounted ? null : !connected ? (
-                    <WalletGate
-                      title="Connect your wallet"
-                      description="Connect to view receivables, place private bids, and manage settlements."
-                      action="Connect wallet"
-                      onAction={() => openConnectModal?.()}
-                    />
-                  ) : wrongNetwork ? (
-                    <NetworkSwitchGate
-                      onAction={() => openChainModal?.()}
-                    />
-                  ) : (
-                    children
-                  )}
-                </div>
-              </SidebarInset>
-            </SidebarProvider>
+              {children}
+            </AppExperience>
           )
         }}
       </ConnectButton.Custom>
     </ToastProvider>
+  )
+}
+
+function AppExperience({
+  children,
+  mounted,
+  walletAddress,
+  wrongNetwork,
+  onConnect,
+  onSwitchNetwork,
+  onDisconnect,
+}: {
+  children: React.ReactNode
+  mounted: boolean
+  walletAddress: string | null
+  wrongNetwork: boolean
+  onConnect: () => void
+  onSwitchNetwork: () => void
+  onDisconnect: () => void
+}) {
+  const [selection, setSelection] = React.useState<{
+    wallet: string
+    role: AppRole | null
+  } | null>(null)
+
+  React.useEffect(() => {
+    if (!walletAddress) return
+
+    const wallet = walletAddress.toLowerCase()
+    const roleTimer = window.setTimeout(() => {
+      const savedRole = window.localStorage.getItem(`bidnox-role:${wallet}`)
+      setSelection({
+        wallet,
+        role:
+          savedRole === "supplier" || savedRole === "financier"
+            ? savedRole
+            : null,
+      })
+    }, 0)
+
+    return () => window.clearTimeout(roleTimer)
+  }, [walletAddress])
+
+  const walletKey = walletAddress?.toLowerCase() ?? null
+  const roleReady = !walletKey || selection?.wallet === walletKey
+  const role = roleReady ? (selection?.role ?? null) : null
+  const RoleIcon = role === "supplier" ? Factory : Landmark
+
+  function selectRole(nextRole: AppRole) {
+    if (!walletKey) return
+    window.localStorage.setItem(`bidnox-role:${walletKey}`, nextRole)
+    setSelection({ wallet: walletKey, role: nextRole })
+  }
+
+  function changeRole() {
+    if (!walletKey) return
+    window.localStorage.removeItem(`bidnox-role:${walletKey}`)
+    setSelection({ wallet: walletKey, role: null })
+  }
+
+  return (
+    <SidebarProvider
+      style={{ "--sidebar-width": "14.5rem" } as React.CSSProperties}
+    >
+      <AppSidebar
+        walletAddress={walletAddress}
+        role={role}
+        wrongNetwork={wrongNetwork}
+        onConnect={onConnect}
+        onSwitchNetwork={onSwitchNetwork}
+        onDisconnect={onDisconnect}
+      />
+      <SidebarInset>
+        <div className="sticky top-0 z-30 flex h-12 items-center justify-between border-b bg-background/95 px-3 backdrop-blur md:h-14 md:px-8">
+          <div className="md:hidden">
+            <SidebarTrigger />
+          </div>
+          {role && walletAddress && !wrongNetwork ? (
+            <Button
+              variant="ghost"
+              size="xs"
+              className="ml-auto text-muted-foreground hover:text-foreground"
+              onClick={changeRole}
+            >
+              <RoleIcon aria-hidden="true" />
+              <span className="hidden sm:inline">
+                Viewing as <span className="capitalize">{role}</span>
+              </span>
+              <span className="sr-only sm:hidden">
+                Change {role} view
+              </span>
+            </Button>
+          ) : null}
+        </div>
+        <div className="mx-auto w-full max-w-[1240px] flex-1 px-4 py-8 md:px-8 md:py-10">
+          {!mounted ? null : !walletAddress ? (
+            <WalletGate
+              title="Connect your wallet"
+              description="Connect to view receivables, place private bids, and manage settlements."
+              action="Connect wallet"
+              onAction={onConnect}
+            />
+          ) : wrongNetwork ? (
+            <NetworkSwitchGate onAction={onSwitchNetwork} />
+          ) : !roleReady ? null : !role ? (
+            <RoleOnboarding onSelect={selectRole} />
+          ) : (
+            children
+          )}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
 

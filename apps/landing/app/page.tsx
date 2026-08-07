@@ -103,7 +103,7 @@ export default function Page() {
 
       <main>
         <section className="px-6 pt-32 pb-20 text-center sm:pt-40">
-          <h1 className="mx-auto max-w-5xl font-heading text-[clamp(2.75rem,9vw,7.5rem)] leading-[0.86] tracking-[-0.03em] uppercase">
+          <h1 className="mx-auto max-w-5xl font-heading text-[clamp(2.75rem,9vw,7.5rem)] leading-[0.86] tracking-[-0.03em]">
             Your lenders
             <br />
             see nothing
@@ -272,7 +272,7 @@ export default function Page() {
 
         <section id="cta" className="px-6 py-16">
           <div className="mx-auto w-full max-w-295 rounded-3xl bg-primary px-8 py-20 text-center sm:px-12">
-            <h2 className="mx-auto max-w-3xl font-heading text-[clamp(2rem,6vw,4.5rem)] leading-[0.9] tracking-[-0.03em] text-primary-foreground uppercase">
+            <h2 className="mx-auto max-w-3xl font-heading text-[clamp(2rem,6vw,4.5rem)] leading-[0.9] tracking-[-0.03em] text-primary-foreground">
               Stop leaking
               <br />
               your pricing
