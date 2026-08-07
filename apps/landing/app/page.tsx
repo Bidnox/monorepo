@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { AssetBox } from "@/components/asset-box"
+import { PhoneFrame, PhoneScreenPlaceholder } from "@/components/phone-frame"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
 import {
@@ -9,6 +10,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { cn } from "@/lib/utils"
 
 const STEPS = [
   {
@@ -26,6 +28,7 @@ const STEPS = [
   {
     asset: "Settlement screen",
     tone: "bg-chart-3",
+    phone: true,
     title: "Settle",
     lines: ["Best bid wins onchain.", "Losing bids stay sealed."],
   },
@@ -36,6 +39,7 @@ const ENABLES = [
     asset: "Supplier dashboard",
     tone: "bg-chart-2",
     ratio: "5 / 4",
+    phone: true,
     title: "Get paid early, quietly",
     lines: ["List a receivable and let financiers compete.", "Your pricing never leaks."],
   },
@@ -101,8 +105,10 @@ export default function Page() {
             see nothing
           </h1>
 
-          <div className="mx-auto mt-14 w-full max-w-95">
-            <AssetBox label="App screen" ratio="1 / 2" tone="bg-secondary" />
+          <div className="mx-auto mt-14 w-full max-w-80">
+            <PhoneFrame>
+              <PhoneScreenPlaceholder label="Hero app screen" />
+            </PhoneFrame>
           </div>
 
           <p className="mt-6 text-[13px] font-semibold">
@@ -121,7 +127,11 @@ export default function Page() {
             <div className="mt-8 grid gap-5 sm:grid-cols-3">
               {STEPS.map((step) => (
                 <div key={step.title}>
-                  <AssetBox label={step.asset} ratio="1 / 1" tone={step.tone} />
+                  {step.phone ? (
+                    <PanelWithPhone label={step.asset} ratio="1 / 1" tone={step.tone} />
+                  ) : (
+                    <AssetBox label={step.asset} ratio="1 / 1" tone={step.tone} />
+                  )}
                   <p className="mt-4 text-[13px] font-semibold">{step.title}</p>
                   {step.lines.map((line) => (
                     <p key={line} className="text-[13px] text-muted-foreground">
@@ -143,7 +153,11 @@ export default function Page() {
             <div className="mt-8 grid gap-5 sm:grid-cols-2">
               {ENABLES.map((item) => (
                 <div key={item.title}>
-                  <AssetBox label={item.asset} ratio={item.ratio} tone={item.tone} />
+                  {item.phone ? (
+                    <PanelWithPhone label={item.asset} ratio={item.ratio} tone={item.tone} />
+                  ) : (
+                    <AssetBox label={item.asset} ratio={item.ratio} tone={item.tone} />
+                  )}
                   <p className="mt-4 text-[13px] font-semibold">{item.title}</p>
                   {item.lines.map((line) => (
                     <p key={line} className="text-[13px] text-muted-foreground">
@@ -238,6 +252,31 @@ export default function Page() {
       </main>
 
       <SiteFooter />
+    </div>
+  )
+}
+
+function PanelWithPhone({
+  label,
+  ratio,
+  tone,
+}: {
+  label: string
+  ratio: string
+  tone: string
+}) {
+  const width = ratio === "1 / 1" ? "w-[38%]" : "w-[30%]"
+
+  return (
+    <div
+      className={`relative flex w-full items-end justify-center overflow-hidden rounded-xl ${tone}`}
+      style={{ aspectRatio: ratio }}
+    >
+      <div className={cn(width, "translate-y-[8%]")}>
+        <PhoneFrame screenClassName="bg-background">
+          <PhoneScreenPlaceholder label={label} />
+        </PhoneFrame>
+      </div>
     </div>
   )
 }

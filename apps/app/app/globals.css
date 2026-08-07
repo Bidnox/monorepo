@@ -239,4 +239,7 @@
   html {
     @apply font-sans;
     }
+  ::selection {
+    @apply bg-foreground text-background;
+    }
 }
