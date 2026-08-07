@@ -1,8 +1,12 @@
+import { createMetadata } from "@bidnox/site-config"
+import type { Metadata } from "next"
 import { Geist, Geist_Mono, Inter } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = createMetadata("landing")
 
 const interHeading = Inter({subsets:['latin'],variable:'--font-heading'});
 

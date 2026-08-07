@@ -1,77 +1,70 @@
 # bidnox branding
 
-The mark is a set of invoice rows with the total sealed. The rows sit back in a muted
-grey so the emerald seal is the thing you look at.
+Invoice rows with the total sealed. The rows sit back in grey so the emerald seal is
+the thing you look at.
+
+Two kits, no light/dark split. Every colour is chosen to read on paper **and** on ink,
+so one file covers both. There is no wordmark lockup file: the wordmark is set in mono
+type by the app, so it always matches the surrounding UI.
 
 ```
-mark          rows 9 / 13.5 / 17 wide, 1.9 tall, on a 24 grid
-seal          13 wide, 4 tall, rx 2, sitting one row-pitch below
-wordmark      bidnox, lowercase, mono, 500, tracking -0.6
+branding/
+  colour/   mark.svg  mark.png  tile.svg  tile.png  tile-bleed.svg  apple-icon.png
+  mono/     mark.svg  mark.png  tile.svg  tile.png  tile-bleed.svg  apple-icon.png
+  social/   og.png
+  preview.png
 ```
 
 ## Colour
 
-| role | light background | dark background |
+| role | value | |
 | --- | --- | --- |
-| rows | `#a1a1aa` zinc-400 | `#71717a` zinc-500 |
-| seal | `#059669` emerald-600 | `#34d399` emerald-400 |
-| wordmark | `#0a0a0a` | `#fafafa` |
+| rows | `#71717a` | zinc-500 |
+| seal | `#10b981` | emerald-500 |
+| ink | `#0a0a0a` | tile and og backgrounds |
+| paper | `#fafaf9` | og background |
 
-Emerald is the only accent. It marks sealed or encrypted values, and nothing else.
+Emerald marks sealed or encrypted values, and nothing else. The same values live in
+code at `@bidnox/site-config` &rarr; `brand.colors`.
 
-## Which file to use
+## Which kit
 
-**In the apps, use the React component, not these files** — it inherits `currentColor`
-and swaps the emerald on theme change:
+**colour** is the default. Grey rows, emerald seal, on any background.
+
+**mono** is black, single colour. Use it for print, stamps, engraving, and anywhere the
+mark sits on emerald, on a photo, or over video.
+
+| purpose | file |
+| --- | --- |
+| Anywhere in a document or deck | `colour/mark.svg`, `colour/mark.png` |
+| One colour, or on emerald / photos | `mono/mark.svg`, `mono/mark.png` |
+| Favicon, PWA, browser tab | `colour/tile.svg` &rarr; shipped as `apps/*/app/icon.svg` |
+| iOS home screen | `colour/apple-icon.png` (full bleed, no radius) |
+| Social cards | `social/og.png` |
+| Everything at a glance | `preview.png` |
+
+PNG sizes: marks 1024x1024 transparent, tiles 512x512, apple icons 180x180, og 1200x630.
+
+## In the apps
+
+Use the component, not the files &mdash; `mono` swaps to `currentColor`:
 
 ```tsx
 import { Logo, LogoMark } from "@/components/logo"
 
 <Logo />            // mark + wordmark
 <LogoMark />        // mark alone
-<LogoMark mono />   // single colour, for emerald or photo backgrounds
+<LogoMark mono />   // single colour
 ```
 
-| purpose | file |
-| --- | --- |
-| Light background &mdash; **the default** | `mark/mark-light.svg`, `lockup/lockup-light.svg` |
-| Dark background | `mark/mark-dark.svg`, `lockup/lockup-dark.svg` |
-| Embedding where the theme is unknown | `mark/mark-auto.svg`, `lockup/lockup-auto.svg` |
-| One colour: print, stamps, engraving | `mark/mark-mono-black.svg` |
-| On emerald, on photos, over video | `mark/mark-mono-white.svg` |
-| Favicon, PWA, browser tab | `app-icon/tile-dark.svg` (shipped as `apps/*/app/icon.svg`) |
-| iOS home screen | `app-icon/apple-icon-180.png` (full bleed, no radius) |
-| Slides, decks, README badges | the `.png` beside each `.svg` |
-| Social cards | `social/og.png`, 1200x630 |
-| Everything at a glance | `preview.png` |
-
-PNG sizes: marks 1024x1024, lockups 1094x320, tiles 512x512, apple icon 180x180.
-All transparent except the tiles, apple icon, and og card.
-
-Each app's `public/` serves the light variant under the plain name, with the other two
-alongside it:
-
-```
-/logo.svg              light   <- default
-/logo-dark.svg         dark
-/logo-auto.svg         follows prefers-color-scheme
-/logo-lockup.svg       light   <- default
-/logo-lockup-dark.svg  dark
-/logo-lockup-auto.svg  follows prefers-color-scheme
-```
+Each app serves `/logo.svg` (colour) and `/logo-mono.svg` for anything outside React.
 
 ## Rules
 
-- The app icon drops to **two rows**. Three rows blur below about 20px, so never
-  scale the full mark down into a favicon.
-- Never distinguish the seal by colour alone. It is always heavier and rounder than
-  the rows, so the mark still works in monochrome.
-- Keep clear space of one row-pitch (about 16% of the mark's width) on all sides.
-- Do not recolour the rows to full black in the two-colour version; the contrast
-  between muted rows and the emerald seal is the mark.
-
-## Regenerating
-
-The lockup `.svg` files set the wordmark as `<text>` with a mono font stack, so a
-viewer without Geist Mono falls back to its own monospace. For anything typeset
-where that matters, use the `.png` or the React component.
+- The tile drops to **two rows**. Three 1.9-unit rows blur below about 20px, so never
+  scale the full mark down into a favicon; use the tile.
+- The seal is heavier and rounder than the rows, never just greener. That is what keeps
+  the mark readable in the mono kit.
+- Keep clear space of one row-pitch, about 16% of the mark's width, on all sides.
+- Do not darken the rows to full black in the colour kit. The contrast between muted
+  rows and the emerald seal is the mark.

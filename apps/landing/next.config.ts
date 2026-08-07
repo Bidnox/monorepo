@@ -1,5 +1,7 @@
 import type { NextConfig } from "next"
 
-const nextConfig: NextConfig = {}
+const nextConfig: NextConfig = {
+  transpilePackages: ["@bidnox/site-config"],
+}
 
 export default nextConfig

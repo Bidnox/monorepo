@@ -5,13 +5,33 @@ Private invoice bidding.
 ## Structure
 
 ```
-apps/landing     marketing site   (next 16, port 3000)
-apps/app         product          (next 16, port 3001)
-contracts/       solidity         (empty)
-docs/brand/      logo exports
+apps/landing            marketing site, bidnox.xyz          (next 16, port 3000)
+apps/app                product, app.bidnox.xyz             (next 16, port 3001)
+packages/site-config    shared brand + metadata config
+contracts/              solidity (empty)
+branding/               logo kits
 ```
 
 Bun workspace. Both apps are scaffolded with `shadcn@latest init @coss/style` (base-ui components, Inter + Geist Mono, css variables).
+
+## Shared config
+
+`@bidnox/site-config` holds everything both apps must agree on: brand colours, social
+handles, per-site urls, and the metadata builder.
+
+```tsx
+// apps/*/app/layout.tsx
+import { createMetadata } from "@bidnox/site-config"
+
+export const metadata: Metadata = createMetadata("landing")  // or "app"
+```
+
+That produces `metadataBase`, title template, description, openGraph, and twitter tags
+from one source. `app` is set `noindex` so the product does not compete with the
+marketing site in search. Both apps list the package in `transpilePackages`.
+
+Copy in `packages/site-config/src/sites.ts` is a placeholder &mdash; replace the tagline
+and summary there and both apps pick it up.
 
 ## Develop
 
@@ -30,9 +50,9 @@ bun run build
 
 ## Brand
 
-Invoice rows with the total sealed. Muted grey rows, emerald seal. Full asset set and
-usage rules in [branding/](branding/README.md), everything at a glance in
-`branding/preview.png`.
+Invoice rows with the total sealed. Two kits, `colour` and `mono`, both readable on any
+background so there is no light/dark split. Assets and rules in
+[branding/](branding/README.md), everything at a glance in `branding/preview.png`.
 
 In the apps, use the component rather than the static files:
 
@@ -44,6 +64,6 @@ import { Logo, LogoMark } from "@/components/logo"
 <LogoMark mono />   // single colour, for emerald or photo backgrounds
 ```
 
-Emerald (`emerald-600` on light, `emerald-400` on dark) marks sealed or encrypted
+Rows are `zinc-500`, the seal is `emerald-500`. Emerald marks sealed or encrypted
 values, and nothing else. Favicons use the Next file convention: `apps/*/app/icon.svg`
 and `apple-icon.png`.

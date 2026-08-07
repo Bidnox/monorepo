@@ -1,0 +1,16 @@
+{
+  "name": "@bidnox/site-config",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "next": ">=16"
+  },
+  "devDependencies": {
+    "next": "16.2.6",
+    "typescript": "^5"
+  }
+}

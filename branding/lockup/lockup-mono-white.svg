@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 82 24" width="82" height="24">
-  <rect x="3.5" y="4.3" width="9" height="1.9" rx=".95" fill="#fafafa"/>
-  <rect x="3.5" y="8.1" width="13.5" height="1.9" rx=".95" fill="#fafafa"/>
-  <rect x="3.5" y="11.9" width="17" height="1.9" rx=".95" fill="#fafafa"/>
-  <rect x="3.5" y="15.7" width="13" height="4" rx="2" fill="#fafafa"/>
-  <text x="26" y="16.4" fill="#fafafa" font-family="ui-monospace, 'Geist Mono', SFMono-Regular, Menlo, monospace" font-size="15" font-weight="500" letter-spacing="-0.6">bidnox</text>
-</svg>

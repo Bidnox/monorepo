@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils"
 
-/** Row widths, top to bottom. The sealed total sits below them. */
 const ROWS = [
   { y: 4.3, width: 9 },
   { y: 8.1, width: 13.5 },
@@ -27,8 +26,7 @@ export function LogoMark({
           width={row.width}
           height="1.9"
           rx="0.95"
-          fill="currentColor"
-          opacity={mono ? 1 : 0.38}
+          className={mono ? "fill-current" : "fill-zinc-500"}
         />
       ))}
       <rect
@@ -37,8 +35,7 @@ export function LogoMark({
         width="13"
         height="4"
         rx="2"
-        fill={mono ? "currentColor" : undefined}
-        className={mono ? undefined : "fill-emerald-600 dark:fill-emerald-400"}
+        className={mono ? "fill-current" : "fill-emerald-500"}
       />
     </svg>
   )
