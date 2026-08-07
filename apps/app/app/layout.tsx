@@ -2,8 +2,10 @@ import { createMetadata } from "@bidnox/site-config"
 import type { Metadata } from "next"
 import { Geist_Mono, Inter } from "next/font/google"
 
+import "@rainbow-me/rainbowkit/styles.css"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Web3Provider } from "@/components/web3-provider"
 import { cn } from "@/lib/utils"
 
 export const metadata: Metadata = createMetadata("app")
@@ -31,7 +33,9 @@ export default function RootLayout({
       )}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <Web3Provider>{children}</Web3Provider>
+        </ThemeProvider>
       </body>
     </html>
   )

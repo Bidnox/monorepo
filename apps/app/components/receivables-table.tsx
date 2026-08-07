@@ -1,9 +1,14 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { ChevronRight } from "lucide-react"
 
 import type { Receivable } from "@/lib/demo-data"
-import { Money, ReceivableStatus } from "@/components/receivable-primitives"
+import {
+  CompanyIdentity,
+  Money,
+  ReceivableStatus,
+} from "@/components/receivable-primitives"
 import {
   Table,
   TableBody,
@@ -33,6 +38,9 @@ function Rows({
           <TableHead>{compact ? "Best status" : "Advance"}</TableHead>
           <TableHead>{compact ? "Due date" : "Due"}</TableHead>
           <TableHead>Status</TableHead>
+          <TableHead className="hidden w-8 md:table-cell">
+            <span className="sr-only">Open</span>
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -42,7 +50,7 @@ function Rows({
             tabIndex={0}
             role="link"
             aria-label={`Open ${receivable.reference}`}
-            className="cursor-pointer focus-visible:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
+            className="group cursor-pointer focus-visible:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
             onClick={() => router.push(`/app/receivables/${receivable.id}`)}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
@@ -54,7 +62,9 @@ function Rows({
             <TableCell className="font-medium">
               {receivable.reference}
             </TableCell>
-            <TableCell>{receivable.buyer}</TableCell>
+            <TableCell>
+              <CompanyIdentity name={receivable.buyer} />
+            </TableCell>
             <TableCell>
               <Money value={receivable.faceValue} />
             </TableCell>
@@ -74,6 +84,9 @@ function Rows({
             <TableCell>{receivable.dueShort}</TableCell>
             <TableCell>
               <ReceivableStatus status={receivable.status} />
+            </TableCell>
+            <TableCell className="hidden md:table-cell">
+              <ChevronRight className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
             </TableCell>
           </TableRow>
         ))}

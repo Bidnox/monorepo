@@ -1,26 +1,29 @@
 "use client"
 
 import * as React from "react"
+import { ConnectButton } from "@rainbow-me/rainbowkit"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTheme } from "next-themes"
 import {
   Activity,
-  ChevronDown,
-  CircleDot,
   FilePlus2,
   Files,
   LayoutDashboard,
+  LogOut,
   Moon,
+  PlugZap,
   Sun,
 } from "lucide-react"
+import { useDisconnect } from "wagmi"
 
 import { Logo } from "@/components/logo"
-import { Address, CleanverseStatus } from "@/components/receivable-primitives"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
+import {
+  CleanverseStatus,
+  CopyableAddress,
+} from "@/components/receivable-primitives"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Popover, PopoverPopup, PopoverTrigger } from "@/components/ui/popover"
 import {
   Sidebar,
   SidebarContent,
@@ -40,6 +43,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Switch } from "@/components/ui/switch"
 import { ToastProvider } from "@/components/ui/toast"
+import { baseSepolia } from "@/lib/wagmi"
 
 const NAVIGATION = [
   { href: "/app", label: "Overview", icon: LayoutDashboard, exact: true },
@@ -62,7 +66,25 @@ const subscribe = () => () => undefined
 const getClientSnapshot = () => true
 const getServerSnapshot = () => false
 
-export function WalletMenu() {
+function shortAddress(address: string) {
+  return `${address.slice(0, 6)}…${address.slice(-4)}`
+}
+
+export function AppSidebar({
+  walletAddress,
+  wrongNetwork,
+  onConnect,
+  onSwitchNetwork,
+  onDisconnect,
+}: {
+  walletAddress: string | null
+  wrongNetwork: boolean
+  onConnect: () => void
+  onSwitchNetwork: () => void
+  onDisconnect: () => void
+}) {
+  const pathname = usePathname()
+  const { setOpenMobile } = useSidebar()
   const mounted = React.useSyncExternalStore(
     subscribe,
     getClientSnapshot,
@@ -70,64 +92,6 @@ export function WalletMenu() {
   )
   const { resolvedTheme, setTheme } = useTheme()
   const isDark = mounted && resolvedTheme === "dark"
-
-  return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="ghost"
-            className="h-auto gap-2 px-2 py-1.5 text-left"
-          />
-        }
-      >
-        <Avatar className="size-7 border">
-          <AvatarFallback>VS</AvatarFallback>
-        </Avatar>
-        <div className="hidden sm:block">
-          <p className="text-xs font-medium">Base Sepolia</p>
-          <Address value="0x128…91A" className="text-muted-foreground" />
-        </div>
-        <ChevronDown
-          className="size-3.5 text-muted-foreground"
-          aria-hidden="true"
-        />
-      </PopoverTrigger>
-      <PopoverPopup align="end" className="w-64" sideOffset={8}>
-        <div className="space-y-4">
-          <div>
-            <p className="text-sm font-medium">Connected account</p>
-            <Address
-              value="0x128B7c92…f91A"
-              className="mt-1 block text-muted-foreground"
-            />
-          </div>
-          <div className="flex items-center justify-between border-t pt-4">
-            <div className="flex items-center gap-2 text-sm">
-              {isDark ? (
-                <Moon className="size-4" />
-              ) : (
-                <Sun className="size-4" />
-              )}
-              Dark mode
-            </div>
-            <Switch
-              checked={isDark}
-              onCheckedChange={(checked) =>
-                setTheme(checked ? "dark" : "light")
-              }
-              aria-label="Toggle dark mode"
-            />
-          </div>
-        </div>
-      </PopoverPopup>
-    </Popover>
-  )
-}
-
-export function AppSidebar() {
-  const pathname = usePathname()
-  const { setOpenMobile } = useSidebar()
 
   return (
     <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border">
@@ -176,22 +140,79 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="gap-3 p-3">
         <SidebarSeparator className="mx-0" />
-        <div className="space-y-1 px-2 py-1 text-xs">
-          <p className="text-sidebar-foreground/60">Network</p>
-          <p className="flex items-center gap-2 font-medium text-sidebar-accent-foreground">
-            <CircleDot className="size-3 text-success" aria-hidden="true" />
-            Base Sepolia
-          </p>
-        </div>
         <div className="rounded-lg bg-sidebar-accent p-2.5">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-xs text-sidebar-foreground/60">Account</span>
-            <CleanverseStatus />
+          {walletAddress ? (
+            <>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-xs text-sidebar-foreground/60">
+                  Account
+                </span>
+                {wrongNetwork ? (
+                  <span className="text-xs text-warning-foreground">
+                    Wrong network
+                  </span>
+                ) : (
+                  <CleanverseStatus />
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Avatar className="size-7 border border-sidebar-border">
+                  <AvatarImage
+                    src="/avatars/vivek.svg"
+                    alt="Wallet avatar"
+                    draggable={false}
+                  />
+                  <AvatarFallback>WA</AvatarFallback>
+                </Avatar>
+                <CopyableAddress
+                  value={walletAddress}
+                  display={shortAddress(walletAddress)}
+                />
+              </div>
+              {wrongNetwork ? (
+                <Button
+                  variant="secondary"
+                  size="xs"
+                  className="mt-3 w-full"
+                  onClick={onSwitchNetwork}
+                >
+                  Switch network
+                </Button>
+              ) : null}
+            </>
+          ) : (
+            <Button size="sm" className="w-full" onClick={onConnect}>
+              Connect wallet
+            </Button>
+          )}
+          <div className="mt-3 flex items-center justify-between border-t border-sidebar-border pt-3">
+            <div className="flex items-center gap-2 text-xs text-sidebar-accent-foreground">
+              {isDark ? (
+                <Moon className="size-3.5" />
+              ) : (
+                <Sun className="size-3.5" />
+              )}
+              Theme
+            </div>
+            <Switch
+              checked={isDark}
+              onCheckedChange={(checked) =>
+                setTheme(checked ? "dark" : "light")
+              }
+              aria-label="Toggle dark mode"
+            />
           </div>
-          <Address
-            value="0x128…91A"
-            className="text-sidebar-accent-foreground"
-          />
+          {walletAddress ? (
+            <Button
+              variant="ghost"
+              size="xs"
+              className="mt-2 w-full justify-start"
+              onClick={onDisconnect}
+            >
+              <LogOut />
+              Disconnect
+            </Button>
+          ) : null}
         </div>
       </SidebarFooter>
       <SidebarRail />
@@ -200,27 +221,111 @@ export function AppSidebar() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const { disconnect } = useDisconnect()
+
   return (
     <ToastProvider position="bottom-right">
-      <SidebarProvider
-        style={{ "--sidebar-width": "14.5rem" } as React.CSSProperties}
-      >
-        <AppSidebar />
-        <SidebarInset>
-          <div className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur md:px-8">
-            <div className="flex items-center gap-3">
-              <SidebarTrigger className="md:hidden" />
-              <Badge variant="outline" className="hidden sm:inline-flex">
-                Demo mode
-              </Badge>
-            </div>
-            <WalletMenu />
-          </div>
-          <div className="mx-auto w-full max-w-[1240px] flex-1 px-4 py-8 md:px-8 md:py-10">
-            {children}
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
+      <ConnectButton.Custom>
+        {({
+          account,
+          chain,
+          mounted,
+          openConnectModal,
+          openChainModal,
+        }) => {
+          const connected = Boolean(mounted && account && chain)
+          const wrongNetwork = Boolean(
+            connected &&
+              (chain?.unsupported || chain?.id !== baseSepolia.id)
+          )
+          const walletAddress = connected ? (account?.address ?? null) : null
+
+          return (
+            <SidebarProvider
+              style={{ "--sidebar-width": "14.5rem" } as React.CSSProperties}
+            >
+              <AppSidebar
+                walletAddress={walletAddress}
+                wrongNetwork={wrongNetwork}
+                onConnect={() => openConnectModal?.()}
+                onSwitchNetwork={() => openChainModal?.()}
+                onDisconnect={() => disconnect()}
+              />
+              <SidebarInset>
+                <div className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur md:hidden">
+                  <SidebarTrigger />
+                  <Logo mono />
+                </div>
+                <div className="mx-auto w-full max-w-[1240px] flex-1 px-4 py-8 md:px-8 md:py-10">
+                  {!mounted ? null : !connected ? (
+                    <WalletGate
+                      title="Connect your wallet"
+                      description="Connect to view receivables, place private bids, and manage settlements."
+                      action="Connect wallet"
+                      onAction={() => openConnectModal?.()}
+                    />
+                  ) : wrongNetwork ? (
+                    <NetworkSwitchGate
+                      onAction={() => openChainModal?.()}
+                    />
+                  ) : (
+                    children
+                  )}
+                </div>
+              </SidebarInset>
+            </SidebarProvider>
+          )
+        }}
+      </ConnectButton.Custom>
     </ToastProvider>
+  )
+}
+
+function NetworkSwitchGate({ onAction }: { onAction: () => void }) {
+  const opened = React.useRef(false)
+
+  React.useEffect(() => {
+    if (!opened.current) {
+      opened.current = true
+      onAction()
+    }
+  }, [onAction])
+
+  return (
+    <WalletGate
+      title="Switch to Base Sepolia"
+      description="Bidnox runs on Base Sepolia. Switch networks in your wallet to continue."
+      action="Switch network"
+      onAction={onAction}
+    />
+  )
+}
+
+function WalletGate({
+  title,
+  description,
+  action,
+  onAction,
+}: {
+  title: string
+  description: string
+  action: string
+  onAction: () => void
+}) {
+  return (
+    <div className="grid min-h-[calc(100dvh-8rem)] place-items-center">
+      <div className="max-w-sm text-center">
+        <div className="mx-auto mb-5 grid size-11 place-items-center rounded-xl border bg-muted/50">
+          <PlugZap className="size-5" aria-hidden="true" />
+        </div>
+        <h1 className="text-xl font-medium tracking-tight">{title}</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          {description}
+        </p>
+        <Button className="mt-6" onClick={onAction}>
+          {action}
+        </Button>
+      </div>
+    </div>
   )
 }

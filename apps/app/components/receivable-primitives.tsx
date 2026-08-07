@@ -1,9 +1,23 @@
-import { ExternalLink } from "lucide-react"
+"use client"
+
+import * as React from "react"
+import {
+  Blocks,
+  Building2,
+  Check,
+  Copy,
+  ExternalLink,
+  LockKeyhole,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react"
 
 import type { ReceivableStatus as ReceivableStatusValue } from "@/lib/demo-data"
 import { formatMoney } from "@/lib/demo-data"
 import { cn } from "@/lib/utils"
 import { Badge, type BadgeProps } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { toastManager } from "@/components/ui/toast"
 
 export function Money({
   value,
@@ -25,6 +39,76 @@ export function Address({
   className?: string
 }) {
   return <span className={cn("font-mono text-xs", className)}>{value}</span>
+}
+
+export function CopyableAddress({
+  value,
+  display = value,
+}: {
+  value: string
+  display?: string
+}) {
+  const [copied, setCopied] = React.useState(false)
+
+  async function copy() {
+    await navigator.clipboard.writeText(value)
+    setCopied(true)
+    toastManager.add({ title: "Copied to clipboard", type: "success" })
+    window.setTimeout(() => setCopied(false), 1200)
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="inline-flex items-center gap-1.5 rounded-md font-mono text-xs text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+    >
+      {display}
+      {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+      <span className="sr-only">Copy address</span>
+    </button>
+  )
+}
+
+export function CompanyIdentity({ name }: { name: string }) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className="grid size-6 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">
+        <Building2 className="size-3.5" aria-hidden="true" />
+      </span>
+      <span>{name}</span>
+    </span>
+  )
+}
+
+export function FinancierIdentity() {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <Avatar className="size-6 border">
+        <AvatarImage src="/avatars/lender.svg" alt="" draggable={false} />
+        <AvatarFallback>LF</AvatarFallback>
+      </Avatar>
+      <Address value="0x817…924" />
+    </span>
+  )
+}
+
+const SOURCE_ICONS = {
+  Bidnox: Sparkles,
+  Inco: LockKeyhole,
+  Cleanverse: ShieldCheck,
+  Blockchain: Blocks,
+  Payments: Blocks,
+} as const
+
+export function SourceBadge({ source }: { source: keyof typeof SOURCE_ICONS }) {
+  const Icon = SOURCE_ICONS[source]
+  return (
+    <Badge variant="secondary">
+      <Icon aria-hidden="true" />
+      {source}
+    </Badge>
+  )
 }
 
 export function CleanverseStatus({ verified = true }: { verified?: boolean }) {

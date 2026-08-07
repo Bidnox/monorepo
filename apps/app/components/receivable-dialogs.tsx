@@ -209,7 +209,7 @@ export function PrivateBidDialog({ receivable }: { receivable: Receivable }) {
             <label className="text-sm font-medium">Your advance</label>
             <NumberFieldGroup>
               <span className="flex items-center ps-3 text-sm text-muted-foreground">
-                ₹
+                $
               </span>
               <NumberFieldInput className="text-left" />
             </NumberFieldGroup>

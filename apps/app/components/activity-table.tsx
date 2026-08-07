@@ -1,8 +1,10 @@
 "use client"
 
 import { ACTIVITY } from "@/lib/demo-data"
-import { TransactionLink } from "@/components/receivable-primitives"
-import { Badge } from "@/components/ui/badge"
+import {
+  SourceBadge,
+  TransactionLink,
+} from "@/components/receivable-primitives"
 import {
   Table,
   TableBody,
@@ -48,7 +50,7 @@ export function ActivityTable() {
                     <TableCell className="font-medium">{row.event}</TableCell>
                     <TableCell>{row.receivable}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{row.source}</Badge>
+                      <SourceBadge source={row.source} />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {row.time}

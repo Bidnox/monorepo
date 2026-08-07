@@ -117,7 +117,7 @@ export const CLOSED_EVIDENCE_EVENTS: EvidenceEvent[] = [
     source: "Cleanverse",
   },
   {
-    event: "₹9,20,000 funded",
+    event: "$920,000 funded",
     time: "08 Aug, 11:03",
     source: "Blockchain",
     transaction: "0x92c4…a171",
@@ -167,9 +167,9 @@ export function getReceivable(id: string) {
 }
 
 export function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-IN", {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "INR",
+    currency: "USD",
     maximumFractionDigits: 0,
   }).format(value)
 }

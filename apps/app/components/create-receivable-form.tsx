@@ -115,7 +115,7 @@ export function CreateReceivableForm() {
             <label className="text-sm font-medium">Face value</label>
             <NumberFieldGroup>
               <span className="flex items-center ps-3 text-sm text-muted-foreground">
-                ₹
+                $
               </span>
               <NumberFieldInput className="text-left" />
             </NumberFieldGroup>

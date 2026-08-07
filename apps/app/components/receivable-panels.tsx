@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, FileText, RefreshCw, ShieldCheck } from "lucide-react"
+import { Check, FileText, ShieldCheck } from "lucide-react"
 
 import {
   CLOSED_EVIDENCE_EVENTS,
@@ -10,8 +10,11 @@ import {
   type Receivable,
 } from "@/lib/demo-data"
 import {
-  Address,
+  CompanyIdentity,
+  CopyableAddress,
+  FinancierIdentity,
   Money,
+  SourceBadge,
   TransactionLink,
 } from "@/components/receivable-primitives"
 import { Badge } from "@/components/ui/badge"
@@ -54,8 +57,14 @@ export function ReceivableSummary({ receivable }: { receivable: Receivable }) {
       <h2 className="mb-3 text-sm font-medium">Deal summary</h2>
       <DetailRows
         rows={[
-          { label: "Seller", value: receivable.seller },
-          { label: "Buyer", value: receivable.buyer },
+          {
+            label: "Seller",
+            value: <CompanyIdentity name={receivable.seller} />,
+          },
+          {
+            label: "Buyer",
+            value: <CompanyIdentity name={receivable.buyer} />,
+          },
           {
             label: "Face value",
             value: <Money value={receivable.faceValue} />,
@@ -135,7 +144,7 @@ export function AuctionPanel({ receivable }: { receivable: Receivable }) {
           </p>
           <DetailRows
             rows={[
-              { label: "Financier", value: <Address value="0x817…924" /> },
+              { label: "Financier", value: <FinancierIdentity /> },
               {
                 label: "Discount",
                 value: (
@@ -157,7 +166,13 @@ export function AuctionPanel({ receivable }: { receivable: Receivable }) {
   )
 }
 
-export function EvidenceTimeline({ receivable }: { receivable: Receivable }) {
+export function EvidenceTimeline({
+  receivable,
+  showHeading = true,
+}: {
+  receivable: Receivable
+  showHeading?: boolean
+}) {
   const events: EvidenceEvent[] = [
     "Funded",
     "Repaid",
@@ -172,12 +187,14 @@ export function EvidenceTimeline({ receivable }: { receivable: Receivable }) {
 
   return (
     <section>
-      <div className="mb-5">
-        <h2 className="text-sm font-medium">Evidence timeline</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Bidnox workflow events with their originating system.
-        </p>
-      </div>
+      {showHeading ? (
+        <div className="mb-5">
+          <h2 className="text-sm font-medium">Evidence timeline</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Bidnox workflow events with their originating system.
+          </p>
+        </div>
+      ) : null}
       <ol className="relative ms-2 border-s">
         {events.map((event) => (
           <li
@@ -193,7 +210,7 @@ export function EvidenceTimeline({ receivable }: { receivable: Receivable }) {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="secondary">{event.source}</Badge>
+                <SourceBadge source={event.source} />
                 {event.transaction ? (
                   <TransactionLink hash={event.transaction} />
                 ) : null}
@@ -207,54 +224,25 @@ export function EvidenceTimeline({ receivable }: { receivable: Receivable }) {
 }
 
 export function CompliancePanel({ receivable }: { receivable: Receivable }) {
-  const [refreshing, setRefreshing] = React.useState(false)
-
-  async function refresh() {
-    setRefreshing(true)
-    await new Promise((resolve) => setTimeout(resolve, 650))
-    setRefreshing(false)
-    toastManager.add({
-      title: "Demo checks refreshed",
-      description: "Connect contract reads to replace this snapshot.",
-      type: "info",
-    })
-  }
-
   return (
-    <Card className="rounded-xl shadow-none">
-      <CardHeader className="p-5 pb-3">
+    <Card
+      className="rounded-xl shadow-none"
+      data-receivable-status={receivable.status}
+    >
+      <CardHeader className="p-5 pb-2">
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-sm">Compliance</CardTitle>
-          <Badge variant="outline">Demo checks</Badge>
+          <CardTitle className="text-sm">Verification</CardTitle>
+          <Badge variant="success">Eligible</Badge>
         </div>
       </CardHeader>
       <CardPanel className="px-5 pb-5">
-        <DetailRows
-          rows={[
-            { label: "Seller", value: "Verified" },
-            { label: "Buyer", value: "Verified" },
-            {
-              label: "Winner",
-              value: ["Funded", "Repaid", "Auction closed"].includes(
-                receivable.status
-              )
-                ? "Verified"
-                : "Not selected",
-            },
-            { label: "Settlement asset", value: "aUSDC" },
-            { label: "Last checked", value: "Demo snapshot" },
-          ]}
-        />
-        <Button
-          variant="secondary"
-          size="sm"
-          className="mt-3 w-full"
-          loading={refreshing}
-          onClick={refresh}
-        >
-          <RefreshCw />
-          Refresh checks
-        </Button>
+        <p className="text-sm text-muted-foreground">
+          Seller and buyer are verified for this transaction.
+        </p>
+        <div className="mt-4 flex items-center gap-2 text-sm">
+          <Check className="size-4 text-success" aria-hidden="true" />
+          Settlement in aUSDC
+        </div>
       </CardPanel>
     </Card>
   )
@@ -282,7 +270,12 @@ export function DocumentPanel({ receivable }: { receivable: Receivable }) {
         </div>
         <Separator className="my-4" />
         <p className="text-xs text-muted-foreground">Fingerprint</p>
-        <Address value="0xf4a1…82de" className="mt-1 block" />
+        <div className="mt-1">
+          <CopyableAddress
+            value={receivable.fingerprint}
+            display="0xf4a1…82de"
+          />
+        </div>
         <Button variant="secondary" size="sm" className="mt-4 w-full">
           View document
         </Button>
