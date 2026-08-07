@@ -1,36 +1,64 @@
 import { cn } from "@/lib/utils"
 
+/** Row widths, top to bottom. The sealed total sits below them. */
+const ROWS = [
+  { y: 4.3, width: 9 },
+  { y: 8.1, width: 13.5 },
+  { y: 11.9, width: 17 },
+]
+
 /**
- * Bidnox mark: an invoice with its amount sealed.
- * Monochrome, inherits `currentColor`.
+ * Bidnox mark: invoice rows with the total sealed.
+ *
+ * Rows inherit `currentColor` at low opacity so the emerald seal carries the
+ * focus. Pass `mono` when the mark sits on emerald, on a photo, or anywhere a
+ * single colour is required.
  */
-export function LogoMark({ className, ...props }: React.ComponentProps<"svg">) {
+export function LogoMark({
+  mono = false,
+  className,
+  ...props
+}: React.ComponentProps<"svg"> & { mono?: boolean }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      fill="none"
       aria-hidden="true"
       className={cn("size-6", className)}
       {...props}
     >
-      <g
-        stroke="currentColor"
-        strokeWidth={1.75}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M6 5.25A1.75 1.75 0 0 1 7.75 3.5h8.5A1.75 1.75 0 0 1 18 5.25V20.5l-2-1.25-2 1.25-2-1.25-2 1.25-2-1.25z" />
-        <path d="M9 8.5h6" />
-      </g>
-      <rect x="9" y="11.5" width="6" height="2.5" rx="1.25" fill="currentColor" />
+      {ROWS.map((row) => (
+        <rect
+          key={row.y}
+          x="3.5"
+          y={row.y}
+          width={row.width}
+          height="1.9"
+          rx="0.95"
+          fill="currentColor"
+          opacity={mono ? 1 : 0.38}
+        />
+      ))}
+      <rect
+        x="3.5"
+        y="15.7"
+        width="13"
+        height="4"
+        rx="2"
+        fill={mono ? "currentColor" : undefined}
+        className={mono ? undefined : "fill-emerald-600 dark:fill-emerald-400"}
+      />
     </svg>
   )
 }
 
-export function Logo({ className, ...props }: React.ComponentProps<"div">) {
+export function Logo({
+  mono = false,
+  className,
+  ...props
+}: React.ComponentProps<"div"> & { mono?: boolean }) {
   return (
     <div className={cn("flex items-center gap-2", className)} {...props}>
-      <LogoMark />
+      <LogoMark mono={mono} />
       <span className="font-mono text-base font-medium tracking-tighter lowercase">
         bidnox
       </span>

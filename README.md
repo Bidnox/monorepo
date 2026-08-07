@@ -30,14 +30,20 @@ bun run build
 
 ## Brand
 
-Not locked yet. Candidates: `apps/landing/public/icon-options.png` (16 marks, each at 68 / 26 / 16px).
+Invoice rows with the total sealed. Muted grey rows, emerald seal. Full asset set and
+usage rules in [branding/](branding/README.md), everything at a glance in
+`branding/preview.png`.
 
-`apps/*/components/logo.tsx` holds the current placeholder (option 01, receipt with a sealed
-total). It is monochrome and inherits `currentColor`:
+In the apps, use the component rather than the static files:
 
 ```tsx
 import { Logo, LogoMark } from "@/components/logo"
+
+<Logo />            // mark + wordmark
+<LogoMark />        // mark alone
+<LogoMark mono />   // single colour, for emerald or photo backgrounds
 ```
 
-Once a mark is picked, exports go to `apps/*/public` (svg + png, black/white) and favicons
-land on the Next file convention: `apps/*/app/icon.svg` and `apple-icon.png`.
+Emerald (`emerald-600` on light, `emerald-400` on dark) marks sealed or encrypted
+values, and nothing else. Favicons use the Next file convention: `apps/*/app/icon.svg`
+and `apple-icon.png`.
