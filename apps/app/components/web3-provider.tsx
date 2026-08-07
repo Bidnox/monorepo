@@ -13,6 +13,9 @@ import { WagmiProvider } from "wagmi"
 import { baseSepolia, wagmiConfig } from "@/lib/wagmi"
 
 const queryClient = new QueryClient()
+const subscribe = () => () => undefined
+const getClientSnapshot = () => true
+const getServerSnapshot = () => false
 
 const sharedTheme = {
   borderRadius: "small",
@@ -21,9 +24,14 @@ const sharedTheme = {
 } as const
 
 export function Web3Provider({ children }: { children: React.ReactNode }) {
+  const mounted = React.useSyncExternalStore(
+    subscribe,
+    getClientSnapshot,
+    getServerSnapshot
+  )
   const { resolvedTheme } = useTheme()
   const rainbowTheme =
-    resolvedTheme === "dark"
+    mounted && resolvedTheme === "dark"
       ? darkTheme({
           ...sharedTheme,
           accentColor: "#f5f5f5",

@@ -1,10 +1,5 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit"
-import {
-  injectedWallet,
-  metaMaskWallet,
-  rainbowWallet,
-  walletConnectWallet,
-} from "@rainbow-me/rainbowkit/wallets"
+import { injectedWallet } from "@rainbow-me/rainbowkit/wallets"
 import { http } from "wagmi"
 import { baseSepolia } from "wagmi/chains"
 
@@ -18,13 +13,8 @@ export const wagmiConfig = getDefaultConfig({
   chains: [baseSepolia],
   wallets: [
     {
-      groupName: "Recommended",
-      wallets: [
-        injectedWallet,
-        metaMaskWallet,
-        rainbowWallet,
-        walletConnectWallet,
-      ],
+      groupName: "Browser wallets",
+      wallets: [injectedWallet],
     },
   ],
   transports: {
