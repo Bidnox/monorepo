@@ -13,7 +13,7 @@ export default function ReceivablesPage() {
         title="Receivables"
         description="Manage invoices submitted for financing."
         actions={
-          <Button render={<Link href="/app/receivables/new" />}>
+          <Button render={<Link href="/receivables/new" />}>
             <Plus />
             New receivable
           </Button>

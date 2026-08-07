@@ -94,7 +94,7 @@ export function CreateReceivableForm() {
       description: "INV-2026-041 is ready for buyer confirmation.",
       type: "success",
     })
-    router.push("/app/receivables/inv-2026-041")
+    router.push("/receivables/inv-2026-041")
   }
 
   return (
@@ -243,7 +243,7 @@ export function CreateReceivableForm() {
         <Button
           variant="ghost"
           disabled={step !== null}
-          render={<Link href="/app/receivables" />}
+          render={<Link href="/receivables" />}
         >
           Cancel
         </Button>

@@ -51,11 +51,11 @@ function Rows({
             role="link"
             aria-label={`Open ${receivable.reference}`}
             className="group cursor-pointer focus-visible:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
-            onClick={() => router.push(`/app/receivables/${receivable.id}`)}
+            onClick={() => router.push(`/receivables/${receivable.id}`)}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault()
-                router.push(`/app/receivables/${receivable.id}`)
+                router.push(`/receivables/${receivable.id}`)
               }
             }}
           >

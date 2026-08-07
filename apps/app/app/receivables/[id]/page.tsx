@@ -45,7 +45,7 @@ export default async function ReceivableDetailPage({
   return (
     <div className="space-y-7">
       <Link
-        href="/app/receivables"
+        href="/receivables"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" aria-hidden="true" />

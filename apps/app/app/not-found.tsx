@@ -2,7 +2,6 @@ import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 
-import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
 
 export const metadata: Metadata = {
@@ -11,10 +10,8 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <main className="grid min-h-dvh place-items-center px-5 py-10">
+    <main className="grid min-h-[calc(100dvh-5rem)] place-items-center py-6">
       <div className="w-full max-w-md text-center">
-        <Logo mono className="mx-auto mb-8" />
-
         <div className="overflow-hidden rounded-xl border bg-muted">
           <Image
             src="/404-invoice.jpg"
@@ -38,7 +35,7 @@ export default function NotFound() {
         </p>
 
         <div className="mt-6 flex items-center justify-center gap-3">
-          <Button render={<Link href="/app" />}>Back to app</Button>
+          <Button render={<Link href="/" />}>Back to app</Button>
           <Button
             variant="secondary"
             render={<Link href="https://bidnox.xyz" />}

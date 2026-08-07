@@ -46,20 +46,20 @@ import { ToastProvider } from "@/components/ui/toast"
 import { baseSepolia } from "@/lib/wagmi"
 
 const NAVIGATION = [
-  { href: "/app", label: "Overview", icon: LayoutDashboard, exact: true },
+  { href: "/", label: "Overview", icon: LayoutDashboard, exact: true },
   {
-    href: "/app/receivables",
+    href: "/receivables",
     label: "Receivables",
     icon: Files,
     exact: false,
   },
   {
-    href: "/app/receivables/new",
+    href: "/receivables/new",
     label: "Create receivable",
     icon: FilePlus2,
     exact: true,
   },
-  { href: "/app/activity", label: "Activity", icon: Activity, exact: false },
+  { href: "/activity", label: "Activity", icon: Activity, exact: false },
 ] as const
 
 const subscribe = () => () => undefined
@@ -96,7 +96,7 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border">
       <SidebarHeader className="px-4 py-5">
-        <Link href="/app" onClick={() => setOpenMobile(false)}>
+        <Link href="/" onClick={() => setOpenMobile(false)}>
           <Logo mono className="text-sidebar-accent-foreground" />
         </Link>
       </SidebarHeader>
@@ -106,10 +106,10 @@ export function AppSidebar({
             <SidebarMenu>
               {NAVIGATION.map((item) => {
                 const active =
-                  item.href === "/app/receivables"
+                  item.href === "/receivables"
                     ? pathname === item.href ||
                       (pathname.startsWith(`${item.href}/`) &&
-                        pathname !== "/app/receivables/new")
+                        pathname !== "/receivables/new")
                     : item.exact
                       ? pathname === item.href
                       : pathname === item.href ||

@@ -4,6 +4,7 @@ import { Geist_Mono, Inter } from "next/font/google"
 
 import "@rainbow-me/rainbowkit/styles.css"
 import "./globals.css"
+import { AppShell } from "@/components/app-shell"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Web3Provider } from "@/components/web3-provider"
 import { cn } from "@/lib/utils"
@@ -34,7 +35,9 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          <Web3Provider>{children}</Web3Provider>
+          <Web3Provider>
+            <AppShell>{children}</AppShell>
+          </Web3Provider>
         </ThemeProvider>
       </body>
     </html>
