@@ -1,9 +1,6 @@
-import { ArrowUpRight, Lock, ShieldCheck } from "lucide-react"
 import Link from "next/link"
 
 import { AssetBox } from "@/components/asset-box"
-import { LogoMark } from "@/components/logo"
-import { MarqueeStrip } from "@/components/marquee-strip"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
 import {
@@ -12,81 +9,64 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 
-const PILLARS = [
+const STEPS = [
   {
-    n: "01",
+    asset: "Listing screen",
+    tone: "bg-[#c9f31d]",
     title: "List",
-    lead: "Put an invoice up",
-    body: "Upload the invoice, set your floor, choose how long bidding stays open.",
+    lines: ["Upload the invoice.", "Set a private floor."],
   },
   {
-    n: "02",
+    asset: "Sealed bid ticket",
+    tone: "bg-[#f2f2f0]",
     title: "Bid",
-    lead: "Nobody sees a number",
-    body: "Every bid is encrypted on submission. No bidder learns another bid, win or lose.",
+    lines: ["Financiers bid blind.", "Nobody sees a number."],
   },
   {
-    n: "03",
+    asset: "Settlement screen",
+    tone: "bg-[#3aa0ff]",
     title: "Settle",
-    lead: "Best bid wins onchain",
-    body: "At close, only the winning amount is revealed. Everything else stays sealed.",
+    lines: ["Best bid wins onchain.", "Losing bids stay sealed."],
   },
 ]
 
-const CAPABILITIES = [
+const ENABLES = [
   {
-    id: "suppliers",
-    eyebrow: "For suppliers",
-    title: "Get paid early without showing your hand",
-    body: "List a receivable and let financiers compete for it. Because bids are sealed, nobody can anchor to a competitor and nobody learns what your cashflow looks like.",
-    points: ["Set a private floor", "Pick your settlement window", "Accept or walk away"],
     asset: "Supplier dashboard",
+    tone: "bg-[#10b981]",
+    ratio: "5 / 4",
+    title: "Get paid early, quietly",
+    lines: ["List a receivable and let financiers compete.", "Your pricing never leaks."],
   },
   {
-    id: "financiers",
-    eyebrow: "For financiers",
-    title: "Price on merit, not on who blinked first",
-    body: "You see the invoice, the obligor, and the history. You do not see the other bids, so you price what the paper is actually worth.",
-    points: ["Blind bidding", "Portfolio view", "Automated settlement"],
     asset: "Bid ticket",
+    tone: "bg-[#f2f2f0]",
+    ratio: "5 / 4",
+    title: "Price on merit",
+    lines: ["You see the paper, not the other bids.", "No anchoring, no blinking first."],
   },
   {
-    id: "settlement",
-    eyebrow: "Settlement",
-    title: "Encrypted until the moment it matters",
-    body: "Amounts are encrypted end to end and only decrypted to settle the winning bid. Losing bids are never revealed, to anyone, at any point.",
-    points: ["Encrypted amounts", "Onchain settlement", "Auditable trail"],
-    asset: "Settlement flow diagram",
+    asset: "Encryption flow",
+    tone: "bg-[#ff3ec8]",
+    ratio: "5 / 4",
+    title: "Encrypted until settlement",
+    lines: ["Amounts decrypt only to settle the winner.", "Everything else stays sealed."],
+  },
+  {
+    asset: "Portfolio view",
+    tone: "bg-[#ffe14d]",
+    ratio: "5 / 4",
+    title: "Every trade, one place",
+    lines: ["Track open auctions and settled paper.", "Export whenever you need it."],
   },
 ]
 
 // TODO: real numbers
 const STATS = [
-  { value: "—", label: "Invoices listed" },
-  { value: "—", label: "Volume settled" },
-  { value: "—", label: "Active financiers" },
-  { value: "0", label: "Bids ever leaked" },
-]
-
-const TILES = [
-  {
-    title: "Read the docs",
-    body: "How sealed bidding and settlement work, end to end.",
-    cta: "Docs",
-  },
-  {
-    title: "Read the contracts",
-    body: "Every contract that touches an amount, in the open.",
-    cta: "GitHub",
-  },
-  {
-    title: "Talk to us",
-    body: "Bringing a book of receivables? Start here.",
-    cta: "Contact",
-  },
+  { value: "—", label: "invoices listed" },
+  { value: "—", label: "volume settled" },
+  { value: "0", label: "bids ever leaked" },
 ]
 
 const FAQ = [
@@ -103,188 +83,131 @@ const FAQ = [
     a: "The best bid above your floor wins at close. The comparison happens over encrypted values, so no intermediate result leaks.",
   },
   {
-    q: "What happens if nothing clears my floor?",
+    q: "What if nothing clears my floor?",
     a: "The auction closes with no winner, nothing is revealed, and you can relist with different terms.",
-  },
-  {
-    q: "Which chain does this settle on?",
-    a: "Settlement is onchain and the contracts are public. Network details are in the docs.",
   },
 ]
 
 export default function Page() {
   return (
-    <div className="flex min-h-svh flex-col">
+    <div className="min-h-svh bg-background">
       <SiteHeader />
 
-      <main className="flex-1">
-        <section className="mx-auto w-full max-w-6xl px-5 pt-16 pb-14 md:pt-24">
-          <div className="flex flex-col items-start gap-6">
-            <span className="inline-flex -rotate-1 items-center gap-2 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold tracking-wide text-emerald-950 uppercase">
-              <Lock className="size-3" />
-              Sealed bids, encrypted amounts
-            </span>
+      <main>
+        <section className="px-6 pt-32 pb-20 text-center sm:pt-40">
+          <h1 className="mx-auto max-w-5xl font-heading text-[clamp(2.75rem,9vw,7.5rem)] leading-[0.86] tracking-[-0.03em] uppercase">
+            Your bidders
+            <br />
+            see nothing
+          </h1>
 
-            <h1 className="max-w-4xl text-5xl leading-[0.92] font-black tracking-tighter uppercase sm:text-7xl md:text-8xl">
-              Bid on invoices
-              <br />
-              without showing
-              <br />
-              <span className="text-emerald-500">your numbers</span>
-            </h1>
-
-            <p className="max-w-xl text-base text-muted-foreground sm:text-lg">
-              bidnox is a sealed-bid marketplace for receivables. Financiers compete blind,
-              amounts stay encrypted, and only the winning bid is ever revealed.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <Button size="xl" render={<Link href="#cta" />}>
-                Get early access
-              </Button>
-              <Button size="xl" variant="outline" render={<Link href="#how" />}>
-                See how it works
-              </Button>
-            </div>
+          <div className="mx-auto mt-14 w-full max-w-95">
+            <AssetBox label="App screen" ratio="1 / 2" tone="bg-[#e9e9e6]" />
           </div>
 
-          <div className="mt-14">
-            <AssetBox label="Product shot, hero" ratio="16 / 9" />
-          </div>
+          <p className="mt-6 text-[13px] font-semibold">
+            Sealed-bid invoice financing, for people who hate leaking price.
+          </p>
         </section>
 
-        <MarqueeStrip />
+        <section id="how" className="px-6 py-16">
+          <div className="mx-auto w-full max-w-295">
+            <h2 className="max-w-md text-[clamp(1.6rem,3.4vw,2.4rem)] leading-[1.08] font-bold tracking-[-0.02em]">
+              How a sealed auction
+              <br />
+              works on bidnox
+            </h2>
 
-        <section id="how" className="mx-auto w-full max-w-6xl px-5 py-20">
-          <h2 className="max-w-2xl text-3xl font-black tracking-tighter uppercase sm:text-5xl">
-            Three steps, one sealed auction
-          </h2>
-
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
-            {PILLARS.map((pillar) => (
-              <div
-                key={pillar.n}
-                className="flex flex-col gap-3 rounded-2xl border border-border p-6"
-              >
-                <span className="text-sm font-bold text-emerald-500">{pillar.n}</span>
-                <h3 className="text-2xl font-black tracking-tight uppercase">{pillar.title}</h3>
-                <p className="text-sm font-semibold">{pillar.lead}</p>
-                <p className="text-sm text-muted-foreground">{pillar.body}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <div className="border-y border-border bg-muted/30">
-          <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-8 px-5 py-14 md:grid-cols-4">
-            {STATS.map((stat) => (
-              <div key={stat.label} className="flex flex-col gap-1">
-                <span className="text-4xl font-black tracking-tighter sm:text-6xl">
-                  {stat.value}
-                </span>
-                <span className="text-xs tracking-widest text-muted-foreground uppercase">
-                  {stat.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {CAPABILITIES.map((cap, i) => (
-          <section
-            key={cap.id}
-            id={cap.id}
-            className="mx-auto w-full max-w-6xl px-5 py-20 md:py-24"
-          >
-            <div className="grid items-center gap-10 md:grid-cols-2 md:gap-16">
-              <div className={cn(i % 2 === 1 && "md:order-2")}>
-                <span className="text-xs font-bold tracking-widest text-emerald-500 uppercase">
-                  {cap.eyebrow}
-                </span>
-                <h2 className="mt-4 text-3xl font-black tracking-tighter uppercase sm:text-4xl">
-                  {cap.title}
-                </h2>
-                <p className="mt-4 text-base text-muted-foreground">{cap.body}</p>
-                <ul className="mt-6 flex flex-col gap-2">
-                  {cap.points.map((point) => (
-                    <li key={point} className="flex items-center gap-2 text-sm font-medium">
-                      <LogoMark className="size-4" />
-                      {point}
-                    </li>
+            <div className="mt-8 grid gap-5 sm:grid-cols-3">
+              {STEPS.map((step) => (
+                <div key={step.title}>
+                  <AssetBox label={step.asset} ratio="1 / 1" tone={step.tone} />
+                  <p className="mt-4 text-[13px] font-semibold">{step.title}</p>
+                  {step.lines.map((line) => (
+                    <p key={line} className="text-[13px] text-black/55">
+                      {line}
+                    </p>
                   ))}
-                </ul>
-              </div>
-              <AssetBox
-                label={cap.asset}
-                ratio="4 / 3"
-                className={cn(i % 2 === 1 && "md:order-1")}
-              />
-            </div>
-          </section>
-        ))}
-
-        <section id="trust" className="border-y border-border">
-          <div className="mx-auto grid w-full max-w-6xl gap-10 px-5 py-16 md:grid-cols-[1fr_1.2fr]">
-            <div>
-              <span className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase">
-                <ShieldCheck className="size-4" />
-                Verify it yourself
-              </span>
-              <h2 className="mt-4 text-3xl font-black tracking-tighter uppercase">
-                Do not take our word for the privacy
-              </h2>
-              <p className="mt-4 text-sm text-muted-foreground">
-                The contracts that hold and compare encrypted amounts are public. Read them,
-                run them, break them.
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {TILES.map((tile) => (
-                <Link
-                  key={tile.title}
-                  href="#cta"
-                  className="group flex flex-col gap-2 rounded-2xl border border-border p-5 transition-colors hover:bg-muted/50"
-                >
-                  <span className="flex items-center justify-between text-sm font-bold tracking-tight uppercase">
-                    {tile.title}
-                    <ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5" />
-                  </span>
-                  <span className="text-sm text-muted-foreground">{tile.body}</span>
-                  <span className="mt-1 text-xs font-bold tracking-widest text-emerald-500 uppercase">
-                    {tile.cta}
-                  </span>
-                </Link>
+                </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="mx-auto w-full max-w-6xl px-5 py-20">
-          <div className="grid gap-10 md:grid-cols-[1fr_1.4fr] md:gap-16">
-            <div>
-              <h2 className="text-3xl font-black tracking-tighter uppercase sm:text-4xl">
-                Watch a sealed auction close
-              </h2>
-              <p className="mt-4 text-sm text-muted-foreground">
-                Ninety seconds, start to settlement, with nothing revealed that should not be.
-              </p>
+        <section id="enables" className="px-6 py-16">
+          <div className="mx-auto w-full max-w-295">
+            <h2 className="max-w-md text-[clamp(1.6rem,3.4vw,2.4rem)] leading-[1.08] font-bold tracking-[-0.02em]">
+              What bidnox enables
+            </h2>
+
+            <div className="mt-8 grid gap-5 sm:grid-cols-2">
+              {ENABLES.map((item) => (
+                <div key={item.title}>
+                  <AssetBox label={item.asset} ratio={item.ratio} tone={item.tone} />
+                  <p className="mt-4 text-[13px] font-semibold">{item.title}</p>
+                  {item.lines.map((line) => (
+                    <p key={line} className="text-[13px] text-black/55">
+                      {line}
+                    </p>
+                  ))}
+                </div>
+              ))}
             </div>
-            <AssetBox label="Walkthrough video" ratio="16 / 9" />
           </div>
         </section>
 
-        <section id="faq" className="border-t border-border">
-          <div className="mx-auto grid w-full max-w-6xl gap-10 px-5 py-20 md:grid-cols-[1fr_1.4fr]">
-            <h2 className="text-3xl font-black tracking-tighter uppercase sm:text-4xl">
+        <section className="px-6 py-16">
+          <div className="mx-auto flex w-full max-w-295 flex-wrap gap-x-20 gap-y-8">
+            {STATS.map((stat) => (
+              <div key={stat.label}>
+                <p className="font-heading text-[clamp(2.5rem,6vw,4.5rem)] leading-none tracking-[-0.03em]">
+                  {stat.value}
+                </p>
+                <p className="mt-2 text-[13px] text-black/55">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="px-6 py-16">
+          <div className="mx-auto w-full max-w-295">
+            <h2 className="max-w-md text-[clamp(1.6rem,3.4vw,2.4rem)] leading-[1.08] font-bold tracking-[-0.02em]">
+              Do not trust us,
+              <br />
+              read the contracts
+            </h2>
+
+            <div className="mt-8 grid gap-5 sm:grid-cols-2">
+              <div>
+                <AssetBox label="Walkthrough video" ratio="16 / 9" tone="bg-[#f2f2f0]" />
+                <p className="mt-4 text-[13px] font-semibold">Watch an auction close</p>
+                <p className="text-[13px] text-black/55">
+                  Ninety seconds, listing to settlement.
+                </p>
+              </div>
+              <div>
+                <AssetBox label="Contracts" ratio="16 / 9" tone="bg-[#e9e9e6]" />
+                <p className="mt-4 text-[13px] font-semibold">Every contract is public</p>
+                <p className="text-[13px] text-black/55">
+                  Read them, run them, try to break them.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="faq" className="px-6 py-16">
+          <div className="mx-auto grid w-full max-w-295 gap-8 md:grid-cols-[1fr_1.6fr]">
+            <h2 className="text-[clamp(1.6rem,3.4vw,2.4rem)] leading-[1.08] font-bold tracking-[-0.02em]">
               Questions
             </h2>
             <Accordion className="w-full">
               {FAQ.map((item) => (
-                <AccordionItem key={item.q} value={item.q}>
-                  <AccordionTrigger className="text-base font-semibold">
+                <AccordionItem key={item.q} value={item.q} className="border-black/8">
+                  <AccordionTrigger className="text-[15px] font-semibold">
                     {item.q}
                   </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground">
+                  <AccordionContent className="text-[13px] text-black/55">
                     {item.a}
                   </AccordionContent>
                 </AccordionItem>
@@ -293,32 +216,23 @@ export default function Page() {
           </div>
         </section>
 
-        <section id="cta" className="border-t border-border bg-emerald-500">
-          <div className="mx-auto flex w-full max-w-6xl flex-col items-start gap-6 px-5 py-20 text-emerald-950">
-            <h2 className="max-w-3xl text-4xl leading-[0.95] font-black tracking-tighter uppercase sm:text-6xl">
-              Stop leaking your pricing
+        <section id="cta" className="px-6 py-16">
+          <div className="mx-auto w-full max-w-295 rounded-3xl bg-neutral-900 px-8 py-20 text-center sm:px-12">
+            <h2 className="mx-auto max-w-3xl font-heading text-[clamp(2rem,6vw,4.5rem)] leading-[0.9] tracking-[-0.03em] text-white uppercase">
+              Stop leaking
+              <br />
+              your pricing
             </h2>
-            <p className="max-w-lg text-base text-emerald-950/80">
-              Early access is opening in batches. Tell us whether you are selling invoices or
+            <p className="mx-auto mt-6 max-w-md text-[13px] text-white/60">
+              Early access opens in batches. Tell us whether you are selling invoices or
               buying them.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                size="xl"
-                className="border-emerald-950 bg-emerald-950 text-emerald-50 hover:bg-emerald-950/90"
-                render={<Link href="#cta" />}
-              >
-                Get early access
-              </Button>
-              <Button
-                size="xl"
-                variant="outline"
-                className="border-emerald-950/25 bg-transparent text-emerald-950 hover:bg-emerald-950/10"
-                render={<Link href="#faq" />}
-              >
-                Read the docs
-              </Button>
-            </div>
+            <Link
+              href="#cta"
+              className="mt-8 inline-flex rounded-full bg-[#c9f31d] px-6 py-3 text-[13px] font-semibold text-neutral-900 transition-transform hover:-translate-y-0.5"
+            >
+              Get early access
+            </Link>
           </div>
         </section>
       </main>

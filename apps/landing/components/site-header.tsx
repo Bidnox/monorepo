@@ -1,44 +1,33 @@
 import Link from "next/link"
 
-import { Logo } from "@/components/logo"
-import { Button } from "@/components/ui/button"
-
-const NAV = [
-  { label: "How it works", href: "#how" },
-  { label: "For suppliers", href: "#suppliers" },
-  { label: "For financiers", href: "#financiers" },
-  { label: "FAQ", href: "#faq" },
-]
+import { social } from "@bidnox/site-config"
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-6 px-5">
-        <Link href="/" className="shrink-0">
-          <Logo />
+    <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4">
+      <div className="pointer-events-auto flex items-center gap-3 rounded-full bg-white/95 p-1.5 pl-4 shadow-[0_1px_2px_rgba(0,0,0,0.08)] backdrop-blur">
+        <Link href="/" className="font-heading text-base tracking-tight uppercase">
+          bidnox
         </Link>
 
-        <nav className="hidden items-center gap-7 md:flex">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <span className="h-5 w-px bg-black/10" />
 
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" render={<Link href="#faq" />}>
-            Docs
-          </Button>
-          <Button size="sm" render={<Link href="#cta" />}>
-            Get early access
-          </Button>
+        <div className="flex items-center gap-3 px-0.5 text-[13px] text-black/55">
+          <Link href={social.x} className="transition-colors hover:text-black">
+            X
+          </Link>
+          <Link href={social.github} className="transition-colors hover:text-black">
+            GitHub
+          </Link>
         </div>
+
+        <Link
+          href="#cta"
+          className="rounded-full bg-neutral-900 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-black"
+        >
+          Get early access
+        </Link>
       </div>
-    </header>
+    </div>
   )
 }
