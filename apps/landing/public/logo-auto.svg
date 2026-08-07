@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <style>
+    svg { --row: #a1a1aa; --seal: #059669 }
+    @media (prefers-color-scheme: dark) { svg { --row: #71717a; --seal: #34d399 } }
+  </style>
+  <rect x="3.5" y="4.3" width="9" height="1.9" rx=".95" fill="var(--row)"/>
+  <rect x="3.5" y="8.1" width="13.5" height="1.9" rx=".95" fill="var(--row)"/>
+  <rect x="3.5" y="11.9" width="17" height="1.9" rx=".95" fill="var(--row)"/>  <rect x="3.5" y="15.7" width="13" height="4" rx="2" fill="var(--seal)"/>
+</svg>

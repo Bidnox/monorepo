@@ -34,9 +34,9 @@ import { Logo, LogoMark } from "@/components/logo"
 
 | purpose | file |
 | --- | --- |
-| Embedding where the theme is unknown | `mark/mark-auto.svg`, `lockup/lockup-auto.svg` |
-| Light background | `mark/mark-light.svg`, `lockup/lockup-light.svg` |
+| Light background &mdash; **the default** | `mark/mark-light.svg`, `lockup/lockup-light.svg` |
 | Dark background | `mark/mark-dark.svg`, `lockup/lockup-dark.svg` |
+| Embedding where the theme is unknown | `mark/mark-auto.svg`, `lockup/lockup-auto.svg` |
 | One colour: print, stamps, engraving | `mark/mark-mono-black.svg` |
 | On emerald, on photos, over video | `mark/mark-mono-white.svg` |
 | Favicon, PWA, browser tab | `app-icon/tile-dark.svg` (shipped as `apps/*/app/icon.svg`) |
@@ -47,6 +47,18 @@ import { Logo, LogoMark } from "@/components/logo"
 
 PNG sizes: marks 1024x1024, lockups 1094x320, tiles 512x512, apple icon 180x180.
 All transparent except the tiles, apple icon, and og card.
+
+Each app's `public/` serves the light variant under the plain name, with the other two
+alongside it:
+
+```
+/logo.svg              light   <- default
+/logo-dark.svg         dark
+/logo-auto.svg         follows prefers-color-scheme
+/logo-lockup.svg       light   <- default
+/logo-lockup-dark.svg  dark
+/logo-lockup-auto.svg  follows prefers-color-scheme
+```
 
 ## Rules
 

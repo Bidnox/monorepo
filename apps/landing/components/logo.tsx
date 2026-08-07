@@ -7,13 +7,6 @@ const ROWS = [
   { y: 11.9, width: 17 },
 ]
 
-/**
- * Bidnox mark: invoice rows with the total sealed.
- *
- * Rows inherit `currentColor` at low opacity so the emerald seal carries the
- * focus. Pass `mono` when the mark sits on emerald, on a photo, or anywhere a
- * single colour is required.
- */
 export function LogoMark({
   mono = false,
   className,
