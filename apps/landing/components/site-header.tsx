@@ -23,7 +23,7 @@ export function SiteHeader() {
 
         <Link
           href="#cta"
-          className="rounded-full bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          className="rounded-full bg-brand px-4 py-2 text-[13px] font-semibold text-brand-foreground transition-colors hover:opacity-90"
         >
           Get early access
         </Link>
