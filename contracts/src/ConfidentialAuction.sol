@@ -5,16 +5,18 @@ import {e} from "@inco/lightning/src/Lib.testnet.sol";
 import {euint256, ebool} from "@inco/lightning/src/Types.sol";
 import {DecryptionAttestation} from "@inco/lightning/src/lightning-parts/DecryptionAttester.types.sol";
 import {IncoUtils} from "@inco/lightning/src/periphery/IncoUtils.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import {ComplianceGate} from "./ComplianceGate.sol";
 import {ReceivableRegistry} from "./ReceivableRegistry.sol";
 import {ComplianceActions} from "./libraries/ComplianceActions.sol";
 
-contract ConfidentialAuction is IncoUtils {
+contract ConfidentialAuction is IncoUtils, ReentrancyGuard {
     struct Auction {
         bytes32 receivableId;
         uint64 opensAt;
         uint64 closesAt;
+        uint256 reserveAmount;
         bool revealRequested;
         bool finalized;
         euint256 highestBid;
@@ -35,20 +37,20 @@ contract ConfidentialAuction is IncoUtils {
     mapping(uint256 auctionId => mapping(address bidder => bool)) public hasBid;
 
     error InvalidAddress();
+    error SystemPaused();
     error UnknownAuction(uint256 auctionId);
     error NotSeller(address caller, address seller);
     error ReceivableNotConfirmed(ReceivableRegistry.ReceivableStatus status);
     error CloseTimeInPast(uint64 closesAt, uint256 nowTs);
+    error InvalidReserve(uint256 reserveAmount, uint256 faceValue);
 
     error BiddingClosed(uint256 auctionId);
     error AlreadyBid(uint256 auctionId, address bidder);
 
     error AuctionStillOpen(uint64 closesAt, uint256 nowTs);
-    error NoBidders(uint256 auctionId);
     error RevealNotRequested(uint256 auctionId);
     error RevealAlreadyRequested(uint256 auctionId);
     error AlreadyFinalized(uint256 auctionId);
-    error NoWinningBid(uint256 auctionId);
     error WinningIndexOutOfRange(uint256 index, uint256 bidderCount);
 
     event AuctionCreated(
@@ -57,6 +59,7 @@ contract ConfidentialAuction is IncoUtils {
     event BidSubmitted(uint256 indexed auctionId, address indexed bidder);
     event AuctionRevealRequested(uint256 indexed auctionId);
     event AuctionFinalized(uint256 indexed auctionId, address indexed winner, uint256 advanceAmount);
+    event AuctionFailed(uint256 indexed auctionId, bytes32 indexed receivableId, uint256 highestBid);
 
     constructor(ComplianceGate gate, ReceivableRegistry registry_) {
         if (address(gate) == address(0) || address(registry_) == address(0)) revert InvalidAddress();
@@ -68,11 +71,17 @@ contract ConfidentialAuction is IncoUtils {
     //     EXTERNAL FUNCTIONS     //
     ////////////////////////////////
 
-    function createAuction(bytes32 receivableId, uint64 closesAt) external returns (uint256 auctionId) {
+    function createAuction(bytes32 receivableId, uint64 closesAt, uint256 reserveAmount)
+        external
+        nonReentrant
+        returns (uint256 auctionId)
+    {
+        if (complianceGate.paused()) revert SystemPaused();
         ReceivableRegistry.Receivable memory r = registry.getReceivable(receivableId);
         if (msg.sender != r.seller) revert NotSeller(msg.sender, r.seller);
         if (r.status != ReceivableRegistry.ReceivableStatus.BuyerConfirmed) revert ReceivableNotConfirmed(r.status);
         if (closesAt <= block.timestamp) revert CloseTimeInPast(closesAt, block.timestamp);
+        if (reserveAmount == 0 || reserveAmount > r.faceValue) revert InvalidReserve(reserveAmount, r.faceValue);
 
         auctionId = ++auctionCount;
 
@@ -80,6 +89,7 @@ contract ConfidentialAuction is IncoUtils {
         a.receivableId = receivableId;
         a.opensAt = uint64(block.timestamp);
         a.closesAt = closesAt;
+        a.reserveAmount = reserveAmount;
 
         a.highestBid = e.asEuint256(0);
         a.winningBidderIndex = e.asEuint256(0);
@@ -96,12 +106,16 @@ contract ConfidentialAuction is IncoUtils {
         bytes calldata encryptedBid,
         ComplianceGate.CompliancePermit calldata permit,
         bytes calldata complianceSignature
-    ) external payable refundUnspent {
+    ) external payable nonReentrant refundUnspent {
         Auction storage a = _get(auctionId);
         if (a.revealRequested || a.finalized || block.timestamp >= a.closesAt) revert BiddingClosed(auctionId);
         if (hasBid[auctionId][msg.sender]) revert AlreadyBid(auctionId, msg.sender);
 
-        complianceGate.verifyPermit(permit, complianceSignature, msg.sender, ComplianceActions.BID, bytes32(auctionId));
+        assert(
+            complianceGate.verifyPermit(
+                permit, complianceSignature, msg.sender, ComplianceActions.BID, bytes32(auctionId)
+            )
+        );
 
         uint256 index = bidders[auctionId].length;
         hasBid[auctionId][msg.sender] = true;
@@ -121,12 +135,17 @@ contract ConfidentialAuction is IncoUtils {
         emit BidSubmitted(auctionId, msg.sender);
     }
 
-    function closeAuction(uint256 auctionId) external {
+    function closeAuction(uint256 auctionId) external nonReentrant {
         Auction storage a = _get(auctionId);
         if (a.finalized) revert AlreadyFinalized(auctionId);
         if (a.revealRequested) revert RevealAlreadyRequested(auctionId);
         if (block.timestamp < a.closesAt) revert AuctionStillOpen(a.closesAt, block.timestamp);
-        if (bidders[auctionId].length == 0) revert NoBidders(auctionId);
+        if (bidders[auctionId].length == 0) {
+            a.finalized = true;
+            registry.recordAuctionFailure(a.receivableId, auctionId);
+            emit AuctionFailed(auctionId, a.receivableId, 0);
+            return;
+        }
 
         a.revealRequested = true;
 
@@ -144,7 +163,7 @@ contract ConfidentialAuction is IncoUtils {
         bytes[] calldata bidSignatures,
         DecryptionAttestation calldata indexAttestation,
         bytes[] calldata indexSignatures
-    ) external {
+    ) external nonReentrant {
         Auction storage a = _get(auctionId);
         if (a.finalized) revert AlreadyFinalized(auctionId);
         if (!a.revealRequested) revert RevealNotRequested(auctionId);
@@ -152,7 +171,13 @@ contract ConfidentialAuction is IncoUtils {
         e.requireEqual(a.highestBid, highestBid, bidAttestation, bidSignatures);
         e.requireEqual(a.winningBidderIndex, winningIndex, indexAttestation, indexSignatures);
 
-        if (highestBid == 0) revert NoWinningBid(auctionId);
+        if (highestBid < a.reserveAmount) {
+            a.finalized = true;
+            a.revealedHighestBid = highestBid;
+            registry.recordAuctionFailure(a.receivableId, auctionId);
+            emit AuctionFailed(auctionId, a.receivableId, highestBid);
+            return;
+        }
         if (winningIndex >= bidders[auctionId].length) {
             revert WinningIndexOutOfRange(winningIndex, bidders[auctionId].length);
         }

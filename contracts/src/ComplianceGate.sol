@@ -4,8 +4,9 @@ pragma solidity ^0.8.28;
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract ComplianceGate is EIP712, Ownable2Step {
+contract ComplianceGate is EIP712, Ownable2Step, Pausable {
     using ECDSA for bytes32;
 
     struct CompliancePermit {
@@ -41,7 +42,7 @@ contract ComplianceGate is EIP712, Ownable2Step {
 
     address public complianceSigner;
 
-    address public settlementAsset;
+    address public immutable settlementAsset;
 
     uint256 public maxPermitTtl;
 
@@ -55,7 +56,6 @@ contract ComplianceGate is EIP712, Ownable2Step {
     error PermitRejected(PermitStatus reason);
 
     event ComplianceSignerUpdated(address indexed previousSigner, address indexed newSigner);
-    event SettlementAssetUpdated(address indexed previousAsset, address indexed newAsset);
     event MaxPermitTtlUpdated(uint256 previousTtl, uint256 newTtl);
     event ConsumerUpdated(address indexed consumer, bool allowed);
     event PermitConsumed(
@@ -73,7 +73,6 @@ contract ComplianceGate is EIP712, Ownable2Step {
         maxPermitTtl = DEFAULT_PERMIT_TTL;
 
         emit ComplianceSignerUpdated(address(0), initialSigner);
-        emit SettlementAssetUpdated(address(0), initialSettlementAsset);
         emit MaxPermitTtlUpdated(0, DEFAULT_PERMIT_TTL);
     }
 
@@ -87,7 +86,7 @@ contract ComplianceGate is EIP712, Ownable2Step {
         address expectedWallet,
         bytes32 expectedAction,
         bytes32 expectedSubjectId
-    ) external returns (bool) {
+    ) external whenNotPaused returns (bool) {
         if (!isConsumer[msg.sender]) revert NotConsumer(msg.sender);
 
         PermitStatus status = _check(permit, signature, expectedWallet, expectedAction, expectedSubjectId);
@@ -132,12 +131,6 @@ contract ComplianceGate is EIP712, Ownable2Step {
         complianceSigner = newSigner;
     }
 
-    function setSettlementAsset(address newAsset) external onlyOwner {
-        if (newAsset == address(0)) revert InvalidAddress();
-        emit SettlementAssetUpdated(settlementAsset, newAsset);
-        settlementAsset = newAsset;
-    }
-
     function setMaxPermitTtl(uint256 newTtl) external onlyOwner {
         if (newTtl == 0 || newTtl > MAX_PERMIT_TTL) revert InvalidTtl(newTtl, MAX_PERMIT_TTL);
         emit MaxPermitTtlUpdated(maxPermitTtl, newTtl);
@@ -148,6 +141,14 @@ contract ComplianceGate is EIP712, Ownable2Step {
         if (consumer == address(0)) revert InvalidAddress();
         isConsumer[consumer] = allowed;
         emit ConsumerUpdated(consumer, allowed);
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
     }
 
     ////////////////////////////////
@@ -174,8 +175,8 @@ contract ComplianceGate is EIP712, Ownable2Step {
 
         if (usedNonces[permit.wallet][permit.nonce]) return PermitStatus.NonceUsed;
 
-        (address recovered, ECDSA.RecoverError err,) = hashPermit(permit).tryRecover(signature);
-        if (err != ECDSA.RecoverError.NoError || recovered != complianceSigner) {
+        (address recovered, ECDSA.RecoverError err, bytes32 errArg) = hashPermit(permit).tryRecover(signature);
+        if (err != ECDSA.RecoverError.NoError || errArg != bytes32(0) || recovered != complianceSigner) {
             return PermitStatus.BadSignature;
         }
 

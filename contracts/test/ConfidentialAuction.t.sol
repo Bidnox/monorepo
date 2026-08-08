@@ -19,6 +19,7 @@ contract ConfidentialAuctionTest is IncoLocalTest, BidnoxFixture {
     ConfidentialAuction internal auction;
 
     uint256 internal constant FACE = 1_000_000e6;
+    uint256 internal constant RESERVE = 1;
     uint64 internal closesAt;
 
     event BidSubmitted(uint256 indexed auctionId, address indexed bidder);
@@ -56,7 +57,7 @@ contract ConfidentialAuctionTest is IncoLocalTest, BidnoxFixture {
     function _openAuction() internal returns (bytes32 id, uint256 auctionId) {
         id = _createAndConfirm();
         vm.prank(seller);
-        auctionId = auction.createAuction(id, closesAt);
+        auctionId = auction.createAuction(id, closesAt, RESERVE);
     }
 
     function _bid(uint256 auctionId, address lender, uint256 amount) internal {
@@ -86,8 +87,7 @@ contract ConfidentialAuctionTest is IncoLocalTest, BidnoxFixture {
 
         ConfidentialAuction.Auction memory a = auction.getAuction(auctionId);
         (uint256 bidValue, DecryptionAttestation memory bidAtt, bytes[] memory bidSigs) = _attest(a.highestBid);
-        (uint256 idxValue, DecryptionAttestation memory idxAtt, bytes[] memory idxSigs) =
-            _attest(a.winningBidderIndex);
+        (uint256 idxValue, DecryptionAttestation memory idxAtt, bytes[] memory idxSigs) = _attest(a.winningBidderIndex);
 
         auction.finalizeAuction(auctionId, bidValue, idxValue, bidAtt, bidSigs, idxAtt, idxSigs);
 
@@ -110,7 +110,17 @@ contract ConfidentialAuctionTest is IncoLocalTest, BidnoxFixture {
 
         vm.prank(buyer);
         vm.expectRevert(abi.encodeWithSelector(ConfidentialAuction.NotSeller.selector, buyer, seller));
-        auction.createAuction(id, closesAt);
+        auction.createAuction(id, closesAt, RESERVE);
+    }
+
+    function test_cannotCreateAuctionWhilePaused() public {
+        bytes32 id = _createAndConfirm();
+        vm.prank(admin);
+        gate.pause();
+
+        vm.prank(seller);
+        vm.expectRevert(ConfidentialAuction.SystemPaused.selector);
+        auction.createAuction(id, closesAt, RESERVE);
     }
 
     function test_cannotAuctionUnconfirmedReceivable() public {
@@ -122,7 +132,7 @@ contract ConfidentialAuctionTest is IncoLocalTest, BidnoxFixture {
                 ConfidentialAuction.ReceivableNotConfirmed.selector, ReceivableRegistry.ReceivableStatus.Created
             )
         );
-        auction.createAuction(id, closesAt);
+        auction.createAuction(id, closesAt, RESERVE);
     }
 
     function test_closeTimeMustBeInFuture() public {
@@ -134,7 +144,18 @@ contract ConfidentialAuctionTest is IncoLocalTest, BidnoxFixture {
                 ConfidentialAuction.CloseTimeInPast.selector, uint64(block.timestamp), block.timestamp
             )
         );
-        auction.createAuction(id, uint64(block.timestamp));
+        auction.createAuction(id, uint64(block.timestamp), RESERVE);
+    }
+
+    function test_reserveMustBeNonZeroAndWithinFaceValue() public {
+        bytes32 id = _createAndConfirm();
+
+        vm.startPrank(seller);
+        vm.expectRevert(abi.encodeWithSelector(ConfidentialAuction.InvalidReserve.selector, 0, FACE));
+        auction.createAuction(id, closesAt, 0);
+        vm.expectRevert(abi.encodeWithSelector(ConfidentialAuction.InvalidReserve.selector, FACE + 1, FACE));
+        auction.createAuction(id, closesAt, FACE + 1);
+        vm.stopPrank();
     }
 
     function test_cannotOpenTwoAuctionsForSameReceivable() public {
@@ -146,7 +167,7 @@ contract ConfidentialAuctionTest is IncoLocalTest, BidnoxFixture {
                 ConfidentialAuction.ReceivableNotConfirmed.selector, ReceivableRegistry.ReceivableStatus.AuctionOpen
             )
         );
-        auction.createAuction(id, closesAt);
+        auction.createAuction(id, closesAt, RESERVE);
     }
 
     function test_cannotBidAfterDeadline() public {
@@ -212,7 +233,7 @@ contract ConfidentialAuctionTest is IncoLocalTest, BidnoxFixture {
         _confirmReceivable(otherId);
 
         vm.prank(seller);
-        uint256 otherAuction = auction.createAuction(otherId, closesAt);
+        uint256 otherAuction = auction.createAuction(otherId, closesAt, RESERVE);
 
         (ComplianceGate.CompliancePermit memory permit, bytes memory sig) =
             _permit(lenderA, ComplianceActions.BID, bytes32(otherAuction));
@@ -295,6 +316,31 @@ contract ConfidentialAuctionTest is IncoLocalTest, BidnoxFixture {
         assertEq(advance, FACE, "over-face offer clamps to face value so finalisation cannot brick");
     }
 
+    function test_bidBelowReserveFailsCleanlyAndCanBeReauctioned() public {
+        bytes32 id = _createAndConfirm();
+        uint256 reserve = 900_000e6;
+        vm.prank(seller);
+        uint256 auctionId = auction.createAuction(id, closesAt, reserve);
+
+        _bid(auctionId, lenderA, reserve - 1);
+        processAllOperations();
+        vm.warp(closesAt);
+        auction.closeAuction(auctionId);
+        processAllOperations();
+
+        ConfidentialAuction.Auction memory a = auction.getAuction(auctionId);
+        (uint256 bidValue, DecryptionAttestation memory bidAtt, bytes[] memory bidSigs) = _attest(a.highestBid);
+        (uint256 idxValue, DecryptionAttestation memory idxAtt, bytes[] memory idxSigs) = _attest(a.winningBidderIndex);
+
+        auction.finalizeAuction(auctionId, bidValue, idxValue, bidAtt, bidSigs, idxAtt, idxSigs);
+
+        a = auction.getAuction(auctionId);
+        assertTrue(a.finalized);
+        assertEq(a.revealedWinner, address(0));
+        assertEq(a.revealedHighestBid, reserve - 1);
+        assertEq(uint8(registry.statusOf(id)), uint8(ReceivableRegistry.ReceivableStatus.BuyerConfirmed));
+    }
+
     function test_cannotCloseBeforeDeadline() public {
         (, uint256 auctionId) = _openAuction();
         _bid(auctionId, lenderA, 900_000e6);
@@ -306,12 +352,18 @@ contract ConfidentialAuctionTest is IncoLocalTest, BidnoxFixture {
         auction.closeAuction(auctionId);
     }
 
-    function test_cannotCloseWithNoBidders() public {
-        (, uint256 auctionId) = _openAuction();
+    function test_noBidAuctionClosesAsFailedAndCanBeReauctioned() public {
+        (bytes32 id, uint256 auctionId) = _openAuction();
         vm.warp(closesAt);
 
-        vm.expectRevert(abi.encodeWithSelector(ConfidentialAuction.NoBidders.selector, auctionId));
         auction.closeAuction(auctionId);
+
+        assertTrue(auction.getAuction(auctionId).finalized);
+        assertEq(uint8(registry.statusOf(id)), uint8(ReceivableRegistry.ReceivableStatus.BuyerConfirmed));
+
+        vm.prank(seller);
+        uint256 nextAuction = auction.createAuction(id, uint64(block.timestamp + 1 days), RESERVE);
+        assertEq(nextAuction, auctionId + 1);
     }
 
     function test_cannotFinalizeBeforeReveal() public {
@@ -357,8 +409,7 @@ contract ConfidentialAuctionTest is IncoLocalTest, BidnoxFixture {
 
         ConfidentialAuction.Auction memory a = auction.getAuction(auctionId);
         (uint256 bidValue, DecryptionAttestation memory bidAtt, bytes[] memory bidSigs) = _attest(a.highestBid);
-        (uint256 idxValue, DecryptionAttestation memory idxAtt, bytes[] memory idxSigs) =
-            _attest(a.winningBidderIndex);
+        (uint256 idxValue, DecryptionAttestation memory idxAtt, bytes[] memory idxSigs) = _attest(a.winningBidderIndex);
 
         vm.expectRevert(abi.encodeWithSelector(ConfidentialAuction.AlreadyFinalized.selector, auctionId));
         auction.finalizeAuction(auctionId, bidValue, idxValue, bidAtt, bidSigs, idxAtt, idxSigs);

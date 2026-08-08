@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 
 import {ComplianceGate} from "../../src/ComplianceGate.sol";
 import {ReceivableRegistry} from "../../src/ReceivableRegistry.sol";
@@ -11,13 +12,11 @@ abstract contract BidnoxFixture is Test {
     ReceivableRegistry internal registry;
 
     address internal admin = makeAddr("admin");
-    address internal aUSDC = makeAddr("aUSDC");
+    ERC20Mock internal token;
+    address internal aUSDC;
 
     uint256 internal complianceSignerKey = 0xC0FFEE;
     address internal complianceSigner = vm.addr(0xC0FFEE);
-
-    uint256 internal settlementSignerKey = 0xBEEF;
-    address internal settlementSigner = vm.addr(0xBEEF);
 
     uint256 internal sellerKey = 0xA11CE;
     address internal seller = vm.addr(0xA11CE);
@@ -37,8 +36,15 @@ abstract contract BidnoxFixture is Test {
     uint256 internal permitNonce;
 
     function _deployCore() internal {
+        token = new ERC20Mock();
+        aUSDC = address(token);
         gate = new ComplianceGate(admin, complianceSigner, aUSDC);
-        registry = new ReceivableRegistry(admin, gate, settlementSigner);
+        registry = new ReceivableRegistry(admin, gate);
+
+        token.mint(lenderA, 10_000_000e6);
+        token.mint(lenderB, 10_000_000e6);
+        token.mint(lenderC, 10_000_000e6);
+        token.mint(buyer, 10_000_000e6);
 
         vm.prank(admin);
         gate.setConsumer(address(registry), true);
@@ -61,14 +67,14 @@ abstract contract BidnoxFixture is Test {
         uint256 nonce
     ) internal view returns (ComplianceGate.CompliancePermit memory permit, bytes memory signature) {
         permit = ComplianceGate.CompliancePermit({
-            wallet: wallet,
-            action: action,
-            subjectId: subjectId,
-            asset: asset,
-            checkedAt: checkedAt,
-            expiresAt: expiresAt,
-            nonce: nonce
-        });
+                wallet: wallet,
+                action: action,
+                subjectId: subjectId,
+                asset: asset,
+                checkedAt: checkedAt,
+                expiresAt: expiresAt,
+                nonce: nonce
+            });
         signature = _sign(complianceSignerKey, gate.hashPermit(permit));
     }
 
@@ -118,21 +124,26 @@ abstract contract BidnoxFixture is Test {
         _confirmReceivable(id);
     }
 
-    function _proof(bytes32 id, bytes32 txHash, address from, address to, uint256 amount)
-        internal
-        view
-        returns (ReceivableRegistry.SettlementProof memory proof, bytes memory signature)
-    {
-        proof = ReceivableRegistry.SettlementProof({
-            receivableId: id,
-            txHash: txHash,
-            from: from,
-            to: to,
-            asset: aUSDC,
-            amount: amount,
-            chainId: block.chainid
-        });
-        signature = _sign(settlementSignerKey, registry.hashSettlementProof(proof));
+    function _fund(bytes32 id, address financier, uint256 amount) internal {
+        (ComplianceGate.CompliancePermit memory financierPermit, bytes memory financierSig) =
+            _permit(financier, keccak256("BIDNOX_SETTLE"), id);
+        (ComplianceGate.CompliancePermit memory sellerPermit, bytes memory sellerSig) =
+            _permit(seller, keccak256("BIDNOX_SETTLE"), id);
+        vm.startPrank(financier);
+        token.approve(address(registry), amount);
+        registry.fundReceivable(id, financierPermit, financierSig, sellerPermit, sellerSig);
+        vm.stopPrank();
+    }
+
+    function _repay(bytes32 id, uint256 amount) internal {
+        (ComplianceGate.CompliancePermit memory buyerPermit, bytes memory buyerSig) =
+            _permit(buyer, keccak256("BIDNOX_REPAY"), id);
+        (ComplianceGate.CompliancePermit memory financierPermit, bytes memory financierSig) =
+            _permit(lenderC, keccak256("BIDNOX_REPAY"), id);
+        vm.startPrank(buyer);
+        token.approve(address(registry), amount);
+        registry.repayReceivable(id, buyerPermit, buyerSig, financierPermit, financierSig);
+        vm.stopPrank();
     }
 
     function _sign(uint256 key, bytes32 digest) internal pure returns (bytes memory) {

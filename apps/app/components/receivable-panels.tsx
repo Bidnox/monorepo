@@ -14,6 +14,7 @@ import {
   CopyableAddress,
   FinancierIdentity,
   Money,
+  SettlementToken,
   SourceBadge,
   TransactionLink,
 } from "@/components/receivable-primitives"
@@ -70,7 +71,7 @@ export function ReceivableSummary({ receivable }: { receivable: Receivable }) {
             value: <Money value={receivable.faceValue} />,
           },
           { label: "Due date", value: receivable.dueDate },
-          { label: "Settlement", value: "aUSDC" },
+          { label: "Settlement", value: <SettlementToken /> },
         ]}
       />
     </section>
@@ -241,7 +242,7 @@ export function CompliancePanel({ receivable }: { receivable: Receivable }) {
         </p>
         <div className="mt-4 flex items-center gap-2 text-sm">
           <Check className="size-4 text-success" aria-hidden="true" />
-          Settlement in aUSDC
+          Settlement in <SettlementToken />
         </div>
       </CardPanel>
     </Card>
@@ -336,7 +337,7 @@ export function SettlementPanel({ receivable }: { receivable: Receivable }) {
             <Money value={receivable.advance ?? 920_000} />
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            aUSDC-equivalent sent to {receivable.seller}
+            <SettlementToken /> sent to {receivable.seller}
           </p>
           <Button variant="secondary" size="sm" className="mt-4">
             View transaction
@@ -346,14 +347,21 @@ export function SettlementPanel({ receivable }: { receivable: Receivable }) {
         <>
           <div className="grid gap-2 text-sm sm:grid-cols-2">
             {[
-              "Seller eligible",
-              "Winner eligible",
-              "Settlement asset: aUSDC",
-              "Buyer confirmed",
+              { key: "seller", content: "Seller eligible" },
+              { key: "winner", content: "Winner eligible" },
+              {
+                key: "asset",
+                content: (
+                  <span className="inline-flex items-center gap-1">
+                    Settlement asset: <SettlementToken />
+                  </span>
+                ),
+              },
+              { key: "buyer", content: "Buyer confirmed" },
             ].map((check) => (
-              <div key={check} className="flex items-center gap-2">
+              <div key={check.key} className="flex items-center gap-2">
                 <Check className="size-3.5 text-success" aria-hidden="true" />
-                {check}
+                {check.content}
               </div>
             ))}
           </div>

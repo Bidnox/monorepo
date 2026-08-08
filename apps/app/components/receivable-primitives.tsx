@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import {
   Blocks,
   Building2,
@@ -14,10 +15,42 @@ import {
 
 import type { ReceivableStatus as ReceivableStatusValue } from "@/lib/demo-data"
 import { formatMoney } from "@/lib/demo-data"
-import { cn } from "@/lib/utils"
-import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { toastManager } from "@/components/ui/toast"
+import { cn } from "@/lib/utils"
+
+export const CLEANVERSE_AUSDC = {
+  name: "Access USDC",
+  symbol: "aUSDC",
+  address: "0xaC0893567D43C3E7e6e35a72803df05416C1f20D",
+  chainId: 84532,
+  image: "/tokens/cleanverse-ausdc.svg",
+} as const
+
+export function SettlementToken({
+  showName = false,
+  className,
+}: {
+  showName?: boolean
+  className?: string
+}) {
+  return (
+    <span
+      className={cn("inline-flex items-center gap-1.5", className)}
+      title={`${CLEANVERSE_AUSDC.name} on Base Sepolia`}
+    >
+      <Image
+        src={CLEANVERSE_AUSDC.image}
+        width={24}
+        height={24}
+        alt=""
+        className="size-5 shrink-0 rounded-full"
+      />
+      <span>{showName ? CLEANVERSE_AUSDC.name : CLEANVERSE_AUSDC.symbol}</span>
+    </span>
+  )
+}
 
 export function Money({
   value,

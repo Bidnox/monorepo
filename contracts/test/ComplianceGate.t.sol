@@ -15,17 +15,11 @@ contract ComplianceGateTest is BidnoxFixture {
         gate.setConsumer(address(this), true);
     }
 
-    function _valid()
-        internal
-        returns (ComplianceGate.CompliancePermit memory permit, bytes memory signature)
-    {
+    function _valid() internal returns (ComplianceGate.CompliancePermit memory permit, bytes memory signature) {
         return _permit(seller, ComplianceActions.CREATE_RECEIVABLE, SUBJECT);
     }
 
-    function _consume(ComplianceGate.CompliancePermit memory permit, bytes memory signature)
-        internal
-        returns (bool)
-    {
+    function _consume(ComplianceGate.CompliancePermit memory permit, bytes memory signature) internal returns (bool) {
         return gate.verifyPermit(permit, signature, seller, ComplianceActions.CREATE_RECEIVABLE, SUBJECT);
     }
 
@@ -107,16 +101,8 @@ contract ComplianceGateTest is BidnoxFixture {
         _consume(permit, sig);
     }
 
-    function test_assetRotationInvalidatesOutstandingPermits() public {
-        (ComplianceGate.CompliancePermit memory permit, bytes memory sig) = _valid();
-
-        vm.prank(admin);
-        gate.setSettlementAsset(makeAddr("newAUSDC"));
-
-        vm.expectRevert(
-            abi.encodeWithSelector(ComplianceGate.PermitRejected.selector, ComplianceGate.PermitStatus.AssetMismatch)
-        );
-        _consume(permit, sig);
+    function test_settlementAssetIsPinned() public view {
+        assertEq(gate.settlementAsset(), aUSDC);
     }
 
     function test_wrongSignerFails() public {
@@ -210,12 +196,26 @@ contract ComplianceGateTest is BidnoxFixture {
         vm.expectRevert();
         gate.setComplianceSigner(stranger);
         vm.expectRevert();
-        gate.setSettlementAsset(stranger);
-        vm.expectRevert();
         gate.setMaxPermitTtl(60);
         vm.expectRevert();
         gate.setConsumer(stranger, true);
+        vm.expectRevert();
+        gate.pause();
         vm.stopPrank();
+    }
+
+    function test_ownerCanPausePermitConsumption() public {
+        (ComplianceGate.CompliancePermit memory permit, bytes memory sig) = _valid();
+
+        vm.prank(admin);
+        gate.pause();
+        vm.expectRevert();
+        _consume(permit, sig);
+        assertFalse(gate.usedNonces(seller, permit.nonce));
+
+        vm.prank(admin);
+        gate.unpause();
+        assertTrue(_consume(permit, sig));
     }
 
     function test_ttlCeilingEnforced() public {
@@ -346,13 +346,7 @@ contract ComplianceGateTest is BidnoxFixture {
         nonce = bound(nonce, 1, type(uint128).max);
 
         (ComplianceGate.CompliancePermit memory permit, bytes memory sig) = _permitWith(
-            seller,
-            ComplianceActions.CREATE_RECEIVABLE,
-            SUBJECT,
-            aUSDC,
-            block.timestamp,
-            block.timestamp + 120,
-            nonce
+            seller, ComplianceActions.CREATE_RECEIVABLE, SUBJECT, aUSDC, block.timestamp, block.timestamp + 120, nonce
         );
 
         assertTrue(_consume(permit, sig));
@@ -364,12 +358,9 @@ contract ComplianceGateTest is BidnoxFixture {
         _consume(permit, sig);
     }
 
-    function testFuzz_checkPermitAgreesWithVerifyPermit(
-        address wallet,
-        bytes32 action,
-        bytes32 subject,
-        uint256 ttl
-    ) public {
+    function testFuzz_checkPermitAgreesWithVerifyPermit(address wallet, bytes32 action, bytes32 subject, uint256 ttl)
+        public
+    {
         ttl = bound(ttl, 1, 600);
 
         (ComplianceGate.CompliancePermit memory permit, bytes memory sig) = _permitWith(

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 
 import {ComplianceGate} from "../../src/ComplianceGate.sol";
 import {ReceivableRegistry} from "../../src/ReceivableRegistry.sol";
@@ -13,22 +14,25 @@ contract BidnoxInvariantTest is Test {
     BidnoxHandler internal handler;
 
     address internal admin = makeAddr("admin");
-    address internal aUSDC = makeAddr("aUSDC");
+    ERC20Mock internal token;
+    address internal aUSDC;
 
     uint256 internal complianceSignerKey = 0xC0FFEE;
-    uint256 internal settlementSignerKey = 0xBEEF;
     uint256 internal buyerKey = 0xB0B;
 
     address internal seller = vm.addr(0xA11CE);
     address internal lender = vm.addr(0x1111);
 
     function setUp() public {
+        token = new ERC20Mock();
+        aUSDC = address(token);
         gate = new ComplianceGate(admin, vm.addr(complianceSignerKey), aUSDC);
-        registry = new ReceivableRegistry(admin, gate, vm.addr(settlementSignerKey));
+        registry = new ReceivableRegistry(admin, gate);
 
-        handler = new BidnoxHandler(
-            gate, registry, aUSDC, complianceSignerKey, settlementSignerKey, seller, buyerKey, lender
-        );
+        handler = new BidnoxHandler(gate, registry, aUSDC, complianceSignerKey, seller, buyerKey, lender);
+
+        token.mint(lender, type(uint128).max);
+        token.mint(vm.addr(buyerKey), type(uint128).max);
 
         vm.startPrank(admin);
         gate.setConsumer(address(registry), true);
@@ -67,19 +71,7 @@ contract BidnoxInvariantTest is Test {
             ) {
                 assertTrue(r.financier != address(0), "funded without a financier");
                 assertGt(r.advanceAmount, 0, "funded with a zero advance");
-                assertTrue(r.fundingReference != bytes32(0), "funded without a funding reference");
-            }
-        }
-    }
-
-   function invariant_repaidImpliesRepaymentReference() public view {
-        uint256 n = handler.idCount();
-        for (uint256 i = 0; i < n; i++) {
-            ReceivableRegistry.Receivable memory r = registry.getReceivable(handler.ids(i));
-
-            if (r.status == ReceivableRegistry.ReceivableStatus.Repaid) {
-                assertTrue(r.repaymentReference != bytes32(0), "repaid without a repayment reference");
-                assertTrue(r.repaymentReference != r.fundingReference, "one transfer used twice");
+                assertGt(r.fundingDeadline, 0, "funded without an auction funding deadline");
             }
         }
     }

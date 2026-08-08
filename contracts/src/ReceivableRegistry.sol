@@ -2,15 +2,17 @@
 pragma solidity ^0.8.28;
 
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import {ComplianceGate} from "./ComplianceGate.sol";
 import {ComplianceActions} from "./libraries/ComplianceActions.sol";
 
-contract ReceivableRegistry is EIP712, Ownable2Step {
-    using ECDSA for bytes32;
+contract ReceivableRegistry is EIP712, Ownable2Step, ReentrancyGuard {
+    using SafeERC20 for IERC20;
 
     enum ReceivableStatus {
         None,
@@ -38,8 +40,7 @@ contract ReceivableRegistry is EIP712, Ownable2Step {
         uint256 auctionId;
         address financier;
         uint256 advanceAmount;
-        bytes32 fundingReference;
-        bytes32 repaymentReference;
+        uint64 fundingDeadline;
     }
 
     struct ReceivableInput {
@@ -53,41 +54,27 @@ contract ReceivableRegistry is EIP712, Ownable2Step {
         address settlementAsset;
     }
 
-    struct SettlementProof {
-        bytes32 receivableId;
-        bytes32 txHash;
-        address from;
-        address to;
-        address asset;
-        uint256 amount;
-        uint256 chainId;
-    }
-
     bytes32 public constant BUYER_CONFIRMATION_TYPEHASH = keccak256(
         "BuyerConfirmation(bytes32 receivableId,address seller,address buyer,uint256 faceValue,uint64 dueDate,bytes32 fingerprint)"
     );
 
-    bytes32 public constant SETTLEMENT_PROOF_TYPEHASH = keccak256(
-        "SettlementProof(bytes32 receivableId,bytes32 txHash,address from,address to,address asset,uint256 amount,uint256 chainId)"
-    );
-
     bytes32 private constant RECEIVABLE_ID_TAG = keccak256("BIDNOX_RECEIVABLE_ID_V1");
+
+    uint64 public constant FUNDING_WINDOW = 1 days;
 
     ComplianceGate public immutable complianceGate;
 
     address public auctionContract;
 
-    address public settlementSigner;
-
     mapping(bytes32 receivableId => Receivable) private _receivables;
 
     mapping(bytes32 fingerprint => bool registered) public registeredFingerprint;
 
-    mapping(bytes32 txHash => bool used) public usedSettlementTx;
-
     error InvalidAddress();
     error NotAuctionContract(address caller);
+    error AuctionContractAlreadySet(address current);
     error NotSeller(address caller, address seller);
+    error NotBuyer(address caller, address buyer);
     error UnknownReceivable(bytes32 receivableId);
     error UnexpectedStatus(ReceivableStatus actual, ReceivableStatus expected);
 
@@ -103,13 +90,10 @@ contract ReceivableRegistry is EIP712, Ownable2Step {
     error InvalidWinner();
     error ZeroAdvance();
     error AdvanceExceedsFaceValue(uint256 advance, uint256 faceValue);
-
-    error ProofChainMismatch(uint256 expected, uint256 actual);
-    error ProofPartyMismatch(address expected, address actual);
-    error ProofAssetMismatch(address expected, address actual);
-    error ProofAmountMismatch(uint256 expected, uint256 actual);
-    error SettlementTxAlreadyUsed(bytes32 txHash);
-    error InvalidSettlementSignature(address recovered, address expected);
+    error NotFinancier(address caller, address financier);
+    error FundingWindowExpired(uint64 deadline, uint256 nowTs);
+    error FundingWindowStillOpen(uint64 deadline, uint256 nowTs);
+    error UnexpectedTransferAmount(uint256 expected, uint256 actual);
     error NotYetDue(uint64 dueDate, uint256 nowTs);
 
     event ReceivableCreated(
@@ -127,37 +111,28 @@ contract ReceivableRegistry is EIP712, Ownable2Step {
         bytes32 indexed receivableId, uint256 indexed auctionId, address indexed financier, uint256 advanceAmount
     );
     event ReceivableFunded(
-        bytes32 indexed receivableId,
-        address indexed financier,
-        address indexed seller,
-        uint256 advanceAmount,
-        bytes32 txHash
+        bytes32 indexed receivableId, address indexed financier, address indexed seller, uint256 advanceAmount
     );
     event ReceivableRepaid(
-        bytes32 indexed receivableId,
-        address indexed buyer,
-        address indexed financier,
-        uint256 amount,
-        bytes32 txHash
+        bytes32 indexed receivableId, address indexed buyer, address indexed financier, uint256 amount
     );
+    event FundingExpired(bytes32 indexed receivableId, uint256 indexed auctionId, address indexed financier);
+    event AuctionFailed(bytes32 indexed receivableId, uint256 indexed auctionId);
     event ReceivableOverdue(bytes32 indexed receivableId, uint64 dueDate);
     event ReceivableCancelled(bytes32 indexed receivableId, address indexed seller);
     event AuctionContractUpdated(address indexed previous, address indexed current);
-    event SettlementSignerUpdated(address indexed previous, address indexed current);
 
     modifier onlyAuction() {
         if (msg.sender != auctionContract) revert NotAuctionContract(msg.sender);
         _;
     }
 
-    constructor(address initialOwner, ComplianceGate gate, address initialSettlementSigner)
+    constructor(address initialOwner, ComplianceGate gate)
         EIP712("Bidnox ReceivableRegistry", "1")
         Ownable(initialOwner)
     {
-        if (address(gate) == address(0) || initialSettlementSigner == address(0)) revert InvalidAddress();
+        if (address(gate) == address(0)) revert InvalidAddress();
         complianceGate = gate;
-        settlementSigner = initialSettlementSigner;
-        emit SettlementSignerUpdated(address(0), initialSettlementSigner);
     }
 
     ////////////////////////////////
@@ -173,8 +148,7 @@ contract ReceivableRegistry is EIP712, Ownable2Step {
                 input.currency,
                 input.faceValue,
                 input.issueDate,
-                input.dueDate,
-                input.documentHash
+                input.dueDate
             )
         );
     }
@@ -187,7 +161,7 @@ contract ReceivableRegistry is EIP712, Ownable2Step {
         ReceivableInput calldata input,
         ComplianceGate.CompliancePermit calldata permit,
         bytes calldata complianceSignature
-    ) external returns (bytes32 receivableId) {
+    ) external nonReentrant returns (bytes32 receivableId) {
         if (input.buyer == address(0)) revert InvalidAddress();
         if (input.buyer == msg.sender) revert BuyerIsSeller(msg.sender);
         if (input.faceValue == 0) revert ZeroFaceValue();
@@ -204,8 +178,10 @@ contract ReceivableRegistry is EIP712, Ownable2Step {
 
         receivableId = computeReceivableId(fingerprint);
 
-        complianceGate.verifyPermit(
-            permit, complianceSignature, msg.sender, ComplianceActions.CREATE_RECEIVABLE, receivableId
+        assert(
+            complianceGate.verifyPermit(
+                permit, complianceSignature, msg.sender, ComplianceActions.CREATE_RECEIVABLE, receivableId
+            )
         );
 
         registeredFingerprint[fingerprint] = true;
@@ -232,15 +208,17 @@ contract ReceivableRegistry is EIP712, Ownable2Step {
         bytes calldata buyerSignature,
         ComplianceGate.CompliancePermit calldata permit,
         bytes calldata complianceSignature
-    ) external {
+    ) external nonReentrant {
         Receivable storage r = _get(receivableId);
         _expect(r.status, ReceivableStatus.Created);
 
         bytes32 digest = hashBuyerConfirmation(receivableId);
         if (!SignatureChecker.isValidSignatureNow(r.buyer, digest, buyerSignature)) revert InvalidBuyerSignature();
 
-        complianceGate.verifyPermit(
-            permit, complianceSignature, r.buyer, ComplianceActions.CONFIRM_RECEIVABLE, receivableId
+        assert(
+            complianceGate.verifyPermit(
+                permit, complianceSignature, r.buyer, ComplianceActions.CONFIRM_RECEIVABLE, receivableId
+            )
         );
 
         r.status = ReceivableStatus.BuyerConfirmed;
@@ -270,36 +248,94 @@ contract ReceivableRegistry is EIP712, Ownable2Step {
 
         r.financier = winner;
         r.advanceAmount = advance;
+        r.fundingDeadline = uint64(block.timestamp) + FUNDING_WINDOW;
         r.status = ReceivableStatus.AuctionClosed;
         emit AuctionClosed(receivableId, auctionId, winner, advance);
     }
 
-    function recordFunding(SettlementProof calldata proof, bytes calldata backendSignature) external {
-        Receivable storage r = _get(proof.receivableId);
-        _expect(r.status, ReceivableStatus.AuctionClosed);
+    function recordAuctionFailure(bytes32 receivableId, uint256 auctionId) external onlyAuction {
+        Receivable storage r = _get(receivableId);
+        _expect(r.status, ReceivableStatus.AuctionOpen);
+        if (r.auctionId != auctionId) revert AuctionMismatch(r.auctionId, auctionId);
 
-        _checkProof(proof, backendSignature, r.financier, r.seller, r.settlementAsset, r.advanceAmount);
-
-        usedSettlementTx[proof.txHash] = true;
-        r.fundingReference = proof.txHash;
-        r.status = ReceivableStatus.Funded;
-
-        emit ReceivableFunded(proof.receivableId, r.financier, r.seller, r.advanceAmount, proof.txHash);
+        r.status = ReceivableStatus.BuyerConfirmed;
+        emit AuctionFailed(receivableId, auctionId);
     }
 
-    function recordRepayment(SettlementProof calldata proof, bytes calldata backendSignature) external {
-        Receivable storage r = _get(proof.receivableId);
+    function fundReceivable(
+        bytes32 receivableId,
+        ComplianceGate.CompliancePermit calldata financierPermit,
+        bytes calldata financierComplianceSignature,
+        ComplianceGate.CompliancePermit calldata sellerPermit,
+        bytes calldata sellerComplianceSignature
+    ) external nonReentrant {
+        Receivable storage r = _get(receivableId);
+        _expect(r.status, ReceivableStatus.AuctionClosed);
+        if (msg.sender != r.financier) revert NotFinancier(msg.sender, r.financier);
+        if (block.timestamp > r.fundingDeadline) revert FundingWindowExpired(r.fundingDeadline, block.timestamp);
+
+        assert(
+            complianceGate.verifyPermit(
+                financierPermit, financierComplianceSignature, msg.sender, ComplianceActions.SETTLE, receivableId
+            )
+        );
+        assert(
+            complianceGate.verifyPermit(
+                sellerPermit, sellerComplianceSignature, r.seller, ComplianceActions.SETTLE, receivableId
+            )
+        );
+
+        r.status = ReceivableStatus.Funded;
+        _transferExact(IERC20(r.settlementAsset), msg.sender, r.seller, r.advanceAmount);
+
+        emit ReceivableFunded(receivableId, r.financier, r.seller, r.advanceAmount);
+    }
+
+    function repayReceivable(
+        bytes32 receivableId,
+        ComplianceGate.CompliancePermit calldata buyerPermit,
+        bytes calldata buyerComplianceSignature,
+        ComplianceGate.CompliancePermit calldata financierPermit,
+        bytes calldata financierComplianceSignature
+    ) external nonReentrant {
+        Receivable storage r = _get(receivableId);
         if (r.status != ReceivableStatus.Funded && r.status != ReceivableStatus.Overdue) {
             revert UnexpectedStatus(r.status, ReceivableStatus.Funded);
         }
+        if (msg.sender != r.buyer) revert NotBuyer(msg.sender, r.buyer);
 
-        _checkProof(proof, backendSignature, r.buyer, r.financier, r.settlementAsset, r.faceValue);
+        assert(
+            complianceGate.verifyPermit(
+                buyerPermit, buyerComplianceSignature, msg.sender, ComplianceActions.REPAY, receivableId
+            )
+        );
+        assert(
+            complianceGate.verifyPermit(
+                financierPermit, financierComplianceSignature, r.financier, ComplianceActions.REPAY, receivableId
+            )
+        );
 
-        usedSettlementTx[proof.txHash] = true;
-        r.repaymentReference = proof.txHash;
         r.status = ReceivableStatus.Repaid;
+        _transferExact(IERC20(r.settlementAsset), msg.sender, r.financier, r.faceValue);
 
-        emit ReceivableRepaid(proof.receivableId, r.buyer, r.financier, r.faceValue, proof.txHash);
+        emit ReceivableRepaid(receivableId, r.buyer, r.financier, r.faceValue);
+    }
+
+    function expireUnfunded(bytes32 receivableId) external {
+        Receivable storage r = _get(receivableId);
+        _expect(r.status, ReceivableStatus.AuctionClosed);
+        if (block.timestamp <= r.fundingDeadline) {
+            revert FundingWindowStillOpen(r.fundingDeadline, block.timestamp);
+        }
+
+        uint256 auctionId = r.auctionId;
+        address financier = r.financier;
+        r.financier = address(0);
+        r.advanceAmount = 0;
+        r.fundingDeadline = 0;
+        r.status = ReceivableStatus.BuyerConfirmed;
+
+        emit FundingExpired(receivableId, auctionId, financier);
     }
 
     function markOverdue(bytes32 receivableId) external {
@@ -344,33 +380,11 @@ contract ReceivableRegistry is EIP712, Ownable2Step {
         );
     }
 
-    function hashSettlementProof(SettlementProof calldata proof) public view returns (bytes32) {
-        return _hashTypedDataV4(
-            keccak256(
-                abi.encode(
-                    SETTLEMENT_PROOF_TYPEHASH,
-                    proof.receivableId,
-                    proof.txHash,
-                    proof.from,
-                    proof.to,
-                    proof.asset,
-                    proof.amount,
-                    proof.chainId
-                )
-            )
-        );
-    }
-
     function setAuctionContract(address newAuction) external onlyOwner {
         if (newAuction == address(0)) revert InvalidAddress();
+        if (auctionContract != address(0)) revert AuctionContractAlreadySet(auctionContract);
         emit AuctionContractUpdated(auctionContract, newAuction);
         auctionContract = newAuction;
-    }
-
-    function setSettlementSigner(address newSigner) external onlyOwner {
-        if (newSigner == address(0)) revert InvalidAddress();
-        emit SettlementSignerUpdated(settlementSigner, newSigner);
-        settlementSigner = newSigner;
     }
 
     ////////////////////////////////
@@ -386,22 +400,10 @@ contract ReceivableRegistry is EIP712, Ownable2Step {
         if (actual != expected) revert UnexpectedStatus(actual, expected);
     }
 
-    function _checkProof(
-        SettlementProof calldata proof,
-        bytes calldata backendSignature,
-        address expectedFrom,
-        address expectedTo,
-        address expectedAsset,
-        uint256 expectedAmount
-    ) private view {
-        if (proof.chainId != block.chainid) revert ProofChainMismatch(block.chainid, proof.chainId);
-        if (proof.from != expectedFrom) revert ProofPartyMismatch(expectedFrom, proof.from);
-        if (proof.to != expectedTo) revert ProofPartyMismatch(expectedTo, proof.to);
-        if (proof.asset != expectedAsset) revert ProofAssetMismatch(expectedAsset, proof.asset);
-        if (proof.amount != expectedAmount) revert ProofAmountMismatch(expectedAmount, proof.amount);
-        if (usedSettlementTx[proof.txHash]) revert SettlementTxAlreadyUsed(proof.txHash);
-
-        address recovered = hashSettlementProof(proof).recover(backendSignature);
-        if (recovered != settlementSigner) revert InvalidSettlementSignature(recovered, settlementSigner);
+    function _transferExact(IERC20 asset, address from, address to, uint256 amount) private {
+        uint256 beforeBalance = asset.balanceOf(to);
+        asset.safeTransferFrom(from, to, amount);
+        uint256 received = asset.balanceOf(to) - beforeBalance;
+        if (received != amount) revert UnexpectedTransferAmount(amount, received);
     }
 }

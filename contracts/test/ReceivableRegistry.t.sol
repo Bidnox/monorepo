@@ -25,9 +25,7 @@ contract ReceivableRegistryTest is BidnoxFixture {
 
     function _toFunded() internal returns (bytes32 id) {
         id = _toAuctionClosed();
-        (ReceivableRegistry.SettlementProof memory proof, bytes memory sig) =
-            _proof(id, keccak256("fundTx"), lenderC, seller, ADVANCE);
-        registry.recordFunding(proof, sig);
+        _fund(id, lenderC, ADVANCE);
     }
 
     function test_createSucceeds() public {
@@ -52,6 +50,21 @@ contract ReceivableRegistryTest is BidnoxFixture {
         vm.prank(seller);
         vm.expectRevert(abi.encodeWithSelector(ReceivableRegistry.DuplicateFingerprint.selector, fingerprint));
         registry.createReceivable(input, permit, sig);
+    }
+
+    function test_documentChangeDoesNotBypassDuplicateFingerprint() public {
+        ReceivableRegistry.ReceivableInput memory original = _defaultInput();
+        _createReceivable(original);
+
+        ReceivableRegistry.ReceivableInput memory altered = original;
+        altered.documentHash = keccak256("same-invoice-different-file");
+        bytes32 fingerprint = registry.computeFingerprint(seller, altered);
+        (ComplianceGate.CompliancePermit memory permit, bytes memory sig) =
+            _permit(seller, ComplianceActions.CREATE_RECEIVABLE, registry.computeReceivableId(fingerprint));
+
+        vm.prank(seller);
+        vm.expectRevert(abi.encodeWithSelector(ReceivableRegistry.DuplicateFingerprint.selector, fingerprint));
+        registry.createReceivable(altered, permit, sig);
     }
 
     function test_buyerCannotBeSeller() public {
@@ -101,9 +114,7 @@ contract ReceivableRegistryTest is BidnoxFixture {
 
         vm.prank(seller);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                ReceivableRegistry.UnsupportedSettlementAsset.selector, input.settlementAsset, aUSDC
-            )
+            abi.encodeWithSelector(ReceivableRegistry.UnsupportedSettlementAsset.selector, input.settlementAsset, aUSDC)
         );
         registry.createReceivable(input, permit, sig);
     }
@@ -132,9 +143,7 @@ contract ReceivableRegistryTest is BidnoxFixture {
 
     function test_buyerConfirmationSucceeds() public {
         bytes32 id = _createAndConfirm();
-        assertEq(
-            uint8(registry.statusOf(id)), uint8(ReceivableRegistry.ReceivableStatus.BuyerConfirmed)
-        );
+        assertEq(uint8(registry.statusOf(id)), uint8(ReceivableRegistry.ReceivableStatus.BuyerConfirmed));
     }
 
     function test_wrongBuyerSignatureRejected() public {
@@ -190,13 +199,17 @@ contract ReceivableRegistryTest is BidnoxFixture {
         vm.stopPrank();
     }
 
+    function test_auctionContractCannotBeRotated() public {
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(ReceivableRegistry.AuctionContractAlreadySet.selector, address(this)));
+        registry.setAuctionContract(makeAddr("replacementAuction"));
+    }
+
     function test_advanceCannotExceedFaceValue() public {
         bytes32 id = _createAndConfirm();
         registry.markAuctionOpened(id, 1);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(ReceivableRegistry.AdvanceExceedsFaceValue.selector, FACE + 1, FACE)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ReceivableRegistry.AdvanceExceedsFaceValue.selector, FACE + 1, FACE));
         registry.recordAuctionResult(id, 1, lenderC, FACE + 1);
     }
 
@@ -209,19 +222,22 @@ contract ReceivableRegistryTest is BidnoxFixture {
     }
 
     function test_fundingSucceeds() public {
+        uint256 sellerBalanceBefore = token.balanceOf(seller);
         bytes32 id = _toFunded();
 
         ReceivableRegistry.Receivable memory r = registry.getReceivable(id);
         assertEq(uint8(r.status), uint8(ReceivableRegistry.ReceivableStatus.Funded));
         assertEq(r.financier, lenderC);
-        assertEq(r.fundingReference, keccak256("fundTx"));
+        assertEq(token.balanceOf(seller) - sellerBalanceBefore, ADVANCE);
     }
 
     function test_cannotFundBeforeAuctionCloses() public {
         bytes32 id = _createAndConfirm();
 
-        (ReceivableRegistry.SettlementProof memory proof, bytes memory sig) =
-            _proof(id, keccak256("tx"), lenderC, seller, ADVANCE);
+        (ComplianceGate.CompliancePermit memory permit, bytes memory sig) =
+            _permit(lenderC, ComplianceActions.SETTLE, id);
+        (ComplianceGate.CompliancePermit memory sellerPermit, bytes memory sellerSig) =
+            _permit(seller, ComplianceActions.SETTLE, id);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -230,87 +246,55 @@ contract ReceivableRegistryTest is BidnoxFixture {
                 ReceivableRegistry.ReceivableStatus.AuctionClosed
             )
         );
-        registry.recordFunding(proof, sig);
+        vm.prank(lenderC);
+        registry.fundReceivable(id, permit, sig, sellerPermit, sellerSig);
     }
 
-    function test_fundingWrongRecipientRejected() public {
+    function test_onlyWinningFinancierCanFund() public {
         bytes32 id = _toAuctionClosed();
 
-        (ReceivableRegistry.SettlementProof memory proof, bytes memory sig) =
-            _proof(id, keccak256("tx"), lenderC, lenderA, ADVANCE);
-
-        vm.expectRevert(abi.encodeWithSelector(ReceivableRegistry.ProofPartyMismatch.selector, seller, lenderA));
-        registry.recordFunding(proof, sig);
+        (ComplianceGate.CompliancePermit memory permit, bytes memory sig) =
+            _permit(lenderA, ComplianceActions.SETTLE, id);
+        (ComplianceGate.CompliancePermit memory sellerPermit, bytes memory sellerSig) =
+            _permit(seller, ComplianceActions.SETTLE, id);
+        vm.prank(lenderA);
+        vm.expectRevert(abi.encodeWithSelector(ReceivableRegistry.NotFinancier.selector, lenderA, lenderC));
+        registry.fundReceivable(id, permit, sig, sellerPermit, sellerSig);
     }
 
-    function test_fundingWrongAmountRejected() public {
+    function test_fundingRequiresFreshSellerEligibilityToo() public {
         bytes32 id = _toAuctionClosed();
+        (ComplianceGate.CompliancePermit memory financierPermit, bytes memory financierSig) =
+            _permit(lenderC, ComplianceActions.SETTLE, id);
+        (ComplianceGate.CompliancePermit memory sellerPermit,) = _permit(seller, ComplianceActions.SETTLE, id);
+        bytes memory forgedSellerSig = _signPermitWith(0xDEAD, sellerPermit);
 
-        (ReceivableRegistry.SettlementProof memory proof, bytes memory sig) =
-            _proof(id, keccak256("tx"), lenderC, seller, ADVANCE - 1);
-
+        vm.startPrank(lenderC);
+        token.approve(address(registry), ADVANCE);
         vm.expectRevert(
-            abi.encodeWithSelector(ReceivableRegistry.ProofAmountMismatch.selector, ADVANCE, ADVANCE - 1)
+            abi.encodeWithSelector(ComplianceGate.PermitRejected.selector, ComplianceGate.PermitStatus.BadSignature)
         );
-        registry.recordFunding(proof, sig);
-    }
+        registry.fundReceivable(id, financierPermit, financierSig, sellerPermit, forgedSellerSig);
+        vm.stopPrank();
 
-    function test_fundingWrongAssetRejected() public {
-        bytes32 id = _toAuctionClosed();
-
-        address fake = makeAddr("fakeToken");
-        ReceivableRegistry.SettlementProof memory proof = ReceivableRegistry.SettlementProof({
-            receivableId: id,
-            txHash: keccak256("tx"),
-            from: lenderC,
-            to: seller,
-            asset: fake,
-            amount: ADVANCE,
-            chainId: block.chainid
-        });
-        bytes memory sig = _sign(settlementSignerKey, registry.hashSettlementProof(proof));
-
-        vm.expectRevert(abi.encodeWithSelector(ReceivableRegistry.ProofAssetMismatch.selector, aUSDC, fake));
-        registry.recordFunding(proof, sig);
-    }
-
-    function test_fundingWrongSignerRejected() public {
-        bytes32 id = _toAuctionClosed();
-
-        ReceivableRegistry.SettlementProof memory proof = ReceivableRegistry.SettlementProof({
-            receivableId: id,
-            txHash: keccak256("tx"),
-            from: lenderC,
-            to: seller,
-            asset: aUSDC,
-            amount: ADVANCE,
-            chainId: block.chainid
-        });
-        bytes memory sig = _sign(0xDEAD, registry.hashSettlementProof(proof));
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ReceivableRegistry.InvalidSettlementSignature.selector, vm.addr(0xDEAD), settlementSigner
-            )
-        );
-        registry.recordFunding(proof, sig);
+        assertEq(uint8(registry.statusOf(id)), uint8(ReceivableRegistry.ReceivableStatus.AuctionClosed));
     }
 
     function test_repaymentSucceeds() public {
         bytes32 id = _toFunded();
-
-        (ReceivableRegistry.SettlementProof memory proof, bytes memory sig) =
-            _proof(id, keccak256("repayTx"), buyer, lenderC, FACE);
-        registry.recordRepayment(proof, sig);
+        uint256 lenderBalanceBefore = token.balanceOf(lenderC);
+        _repay(id, FACE);
 
         assertEq(uint8(registry.statusOf(id)), uint8(ReceivableRegistry.ReceivableStatus.Repaid));
+        assertEq(token.balanceOf(lenderC) - lenderBalanceBefore, FACE);
     }
 
     function test_cannotRepayBeforeFunded() public {
         bytes32 id = _toAuctionClosed();
 
-        (ReceivableRegistry.SettlementProof memory proof, bytes memory sig) =
-            _proof(id, keccak256("repayTx"), buyer, lenderC, FACE);
+        (ComplianceGate.CompliancePermit memory permit, bytes memory sig) = _permit(buyer, ComplianceActions.REPAY, id);
+        (ComplianceGate.CompliancePermit memory financierPermit, bytes memory financierSig) =
+            _permit(lenderC, ComplianceActions.REPAY, id);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -319,18 +303,18 @@ contract ReceivableRegistryTest is BidnoxFixture {
                 ReceivableRegistry.ReceivableStatus.Funded
             )
         );
-        registry.recordRepayment(proof, sig);
+        vm.prank(buyer);
+        registry.repayReceivable(id, permit, sig, financierPermit, financierSig);
     }
 
     function test_cannotRepayTwice() public {
         bytes32 id = _toFunded();
 
-        (ReceivableRegistry.SettlementProof memory proof, bytes memory sig) =
-            _proof(id, keccak256("repayTx"), buyer, lenderC, FACE);
-        registry.recordRepayment(proof, sig);
+        _repay(id, FACE);
 
-        (ReceivableRegistry.SettlementProof memory proof2, bytes memory sig2) =
-            _proof(id, keccak256("repayTx2"), buyer, lenderC, FACE);
+        (ComplianceGate.CompliancePermit memory permit, bytes memory sig) = _permit(buyer, ComplianceActions.REPAY, id);
+        (ComplianceGate.CompliancePermit memory financierPermit, bytes memory financierSig) =
+            _permit(lenderC, ComplianceActions.REPAY, id);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -339,41 +323,26 @@ contract ReceivableRegistryTest is BidnoxFixture {
                 ReceivableRegistry.ReceivableStatus.Funded
             )
         );
-        registry.recordRepayment(proof2, sig2);
+        vm.prank(buyer);
+        registry.repayReceivable(id, permit, sig, financierPermit, financierSig);
     }
 
-    function test_settlementTxCannotBeReplayed() public {
-        bytes32 id = _toFunded();
-
-        (ReceivableRegistry.SettlementProof memory proof, bytes memory sig) =
-            _proof(id, keccak256("fundTx"), buyer, lenderC, FACE);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(ReceivableRegistry.SettlementTxAlreadyUsed.selector, keccak256("fundTx"))
-        );
-        registry.recordRepayment(proof, sig);
-    }
-
-    function test_proofFromAnotherChainRejected() public {
+    function test_expiredFundingCanBeReleasedForReauction() public {
         bytes32 id = _toAuctionClosed();
-
-        ReceivableRegistry.SettlementProof memory proof = ReceivableRegistry.SettlementProof({
-            receivableId: id,
-            txHash: keccak256("tx"),
-            from: lenderC,
-            to: seller,
-            asset: aUSDC,
-            amount: ADVANCE,
-            chainId: block.chainid + 1
-        });
-        bytes memory sig = _sign(settlementSignerKey, registry.hashSettlementProof(proof));
+        uint64 deadline = registry.getReceivable(id).fundingDeadline;
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                ReceivableRegistry.ProofChainMismatch.selector, block.chainid, block.chainid + 1
-            )
+            abi.encodeWithSelector(ReceivableRegistry.FundingWindowStillOpen.selector, deadline, block.timestamp)
         );
-        registry.recordFunding(proof, sig);
+        registry.expireUnfunded(id);
+
+        vm.warp(uint256(deadline) + 1);
+        registry.expireUnfunded(id);
+
+        ReceivableRegistry.Receivable memory r = registry.getReceivable(id);
+        assertEq(uint8(r.status), uint8(ReceivableRegistry.ReceivableStatus.BuyerConfirmed));
+        assertEq(r.financier, address(0));
+        assertEq(r.advanceAmount, 0);
     }
 
     function test_overdueOnlyAfterDueDate() public {
@@ -393,9 +362,7 @@ contract ReceivableRegistryTest is BidnoxFixture {
         vm.warp(uint256(registry.getReceivable(id).dueDate) + 1);
         registry.markOverdue(id);
 
-        (ReceivableRegistry.SettlementProof memory proof, bytes memory sig) =
-            _proof(id, keccak256("lateRepay"), buyer, lenderC, FACE);
-        registry.recordRepayment(proof, sig);
+        _repay(id, FACE);
 
         assertEq(uint8(registry.statusOf(id)), uint8(ReceivableRegistry.ReceivableStatus.Repaid));
     }
@@ -474,21 +441,8 @@ contract ReceivableRegistryTest is BidnoxFixture {
         bytes32 id = _createAndConfirm();
         registry.markAuctionOpened(id, 1);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(ReceivableRegistry.AdvanceExceedsFaceValue.selector, advance, FACE)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ReceivableRegistry.AdvanceExceedsFaceValue.selector, advance, FACE));
         registry.recordAuctionResult(id, 1, lenderC, advance);
-    }
-
-    function testFuzz_fundingRejectsAnyPartyMismatch(address from, address to) public {
-        vm.assume(from != lenderC || to != seller);
-
-        bytes32 id = _toAuctionClosed();
-        (ReceivableRegistry.SettlementProof memory proof, bytes memory sig) =
-            _proof(id, keccak256("tx"), from, to, ADVANCE);
-
-        vm.expectRevert();
-        registry.recordFunding(proof, sig);
     }
 
     function testFuzz_overdueBoundary(uint64 tenor, uint64 elapsed) public {
@@ -503,9 +457,7 @@ contract ReceivableRegistryTest is BidnoxFixture {
         registry.markAuctionOpened(id, 1);
         registry.recordAuctionResult(id, 1, lenderC, ADVANCE);
 
-        (ReceivableRegistry.SettlementProof memory proof, bytes memory sig) =
-            _proof(id, keccak256("fund"), lenderC, seller, ADVANCE);
-        registry.recordFunding(proof, sig);
+        _fund(id, lenderC, ADVANCE);
 
         uint64 dueDate = input.dueDate;
         vm.warp(block.timestamp + elapsed);

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {ComplianceGate} from "../../src/ComplianceGate.sol";
 import {ReceivableRegistry} from "../../src/ReceivableRegistry.sol";
@@ -13,7 +14,6 @@ contract BidnoxHandler is Test {
 
     address public immutable aUSDC;
     uint256 public immutable complianceSignerKey;
-    uint256 public immutable settlementSignerKey;
 
     address public immutable seller;
     uint256 public immutable buyerKey;
@@ -24,7 +24,6 @@ contract BidnoxHandler is Test {
     mapping(bytes32 => bool) public known;
 
     uint256 public permitNonce;
-    uint256 public txNonce;
     uint256 public createdCount;
 
     mapping(bytes32 => uint8) public highWaterRank;
@@ -34,7 +33,6 @@ contract BidnoxHandler is Test {
         ReceivableRegistry registry_,
         address aUSDC_,
         uint256 complianceSignerKey_,
-        uint256 settlementSignerKey_,
         address seller_,
         uint256 buyerKey_,
         address lender_
@@ -43,7 +41,6 @@ contract BidnoxHandler is Test {
         registry = registry_;
         aUSDC = aUSDC_;
         complianceSignerKey = complianceSignerKey_;
-        settlementSignerKey = settlementSignerKey_;
         seller = seller_;
         buyerKey = buyerKey_;
         buyer = vm.addr(buyerKey_);
@@ -164,17 +161,14 @@ contract BidnoxHandler is Test {
 
         ReceivableRegistry.Receivable memory r = registry.getReceivable(id);
 
-        ReceivableRegistry.SettlementProof memory proof = ReceivableRegistry.SettlementProof({
-            receivableId: id,
-            txHash: keccak256(abi.encode("fund", id, ++txNonce)),
-            from: r.financier,
-            to: r.seller,
-            asset: aUSDC,
-            amount: r.advanceAmount,
-            chainId: block.chainid
-        });
-
-        registry.recordFunding(proof, _sign(settlementSignerKey, registry.hashSettlementProof(proof)));
+        (ComplianceGate.CompliancePermit memory financierPermit, bytes memory financierSig) =
+            _permit(r.financier, ComplianceActions.SETTLE, id);
+        (ComplianceGate.CompliancePermit memory sellerPermit, bytes memory sellerSig) =
+            _permit(r.seller, ComplianceActions.SETTLE, id);
+        vm.startPrank(r.financier);
+        IERC20(aUSDC).approve(address(registry), r.advanceAmount);
+        registry.fundReceivable(id, financierPermit, financierSig, sellerPermit, sellerSig);
+        vm.stopPrank();
         _record(id);
     }
 
@@ -184,17 +178,14 @@ contract BidnoxHandler is Test {
 
         ReceivableRegistry.Receivable memory r = registry.getReceivable(id);
 
-        ReceivableRegistry.SettlementProof memory proof = ReceivableRegistry.SettlementProof({
-            receivableId: id,
-            txHash: keccak256(abi.encode("repay", id, ++txNonce)),
-            from: r.buyer,
-            to: r.financier,
-            asset: aUSDC,
-            amount: r.faceValue,
-            chainId: block.chainid
-        });
-
-        registry.recordRepayment(proof, _sign(settlementSignerKey, registry.hashSettlementProof(proof)));
+        (ComplianceGate.CompliancePermit memory buyerPermit, bytes memory buyerSig) =
+            _permit(r.buyer, ComplianceActions.REPAY, id);
+        (ComplianceGate.CompliancePermit memory financierPermit, bytes memory financierSig) =
+            _permit(r.financier, ComplianceActions.REPAY, id);
+        vm.startPrank(r.buyer);
+        IERC20(aUSDC).approve(address(registry), r.faceValue);
+        registry.repayReceivable(id, buyerPermit, buyerSig, financierPermit, financierSig);
+        vm.stopPrank();
         _record(id);
     }
 
