@@ -207,21 +207,13 @@ export function CompliancePanel({ receivable }: { receivable: Receivable }) {
   const [eligible, setEligible] = React.useState<boolean>()
 
   React.useEffect(() => {
-    Promise.all(
-      [receivable.seller, receivable.buyer].map((address) =>
-        fetch(`/api/cleanverse/status?address=${address}`, { cache: "no-store" })
-          .then((response) => (response.ok ? response.json() : Promise.reject()))
-      )
-    )
-      .then((results) =>
-        setEligible(
-          results.every(
-            (result) => Number(result.verification?.data?.code) === 4
-          )
-        )
-      )
+    fetch(`/api/cleanverse/status?receivableId=${receivable.id}`, {
+      cache: "no-store",
+    })
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then((result) => setEligible(result.eligible === true))
       .catch(() => setEligible(false))
-  }, [receivable.buyer, receivable.seller])
+  }, [receivable.id])
 
   return (
     <Card

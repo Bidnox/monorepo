@@ -12,6 +12,7 @@ import {
   SettlementPanel,
 } from "@/components/receivable-panels"
 import { Money, ReceivableStatus } from "@/components/receivable-primitives"
+import { ReceivableActions } from "@/components/transaction-actions"
 import { getReceivableById } from "@/lib/server/bidnox"
 
 export const dynamic = "force-dynamic"
@@ -57,6 +58,8 @@ export default async function ReceivableDetailPage({
           <p className="mt-1 font-medium">{receivable.dueDate}</p>
         </div>
       </div>
+
+      <ReceivableActions receivable={receivable} />
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1.7fr)_minmax(17rem,0.8fr)]">
         <div className="min-w-0 space-y-8">
