@@ -45,18 +45,20 @@ function DetailRows({
 
 export function PrivacySummary() {
   return (
-    <section className="flex items-start gap-3 rounded-xl border border-success/20 bg-success/5 p-4">
-      <div className="grid size-9 shrink-0 place-items-center rounded-full bg-success/10 text-success-foreground">
+    <section className="relative flex items-start gap-3 overflow-hidden rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.045] p-4 shadow-sm sm:p-5">
+      <div className="pointer-events-none absolute -top-16 -right-10 size-36 rounded-full bg-emerald-400/10 blur-2xl" />
+      <div className="relative grid size-10 shrink-0 place-items-center rounded-xl border border-emerald-500/20 bg-background text-emerald-700 shadow-sm dark:text-emerald-400">
         <LockKeyhole className="size-4" aria-hidden="true" />
       </div>
-      <div>
+      <div className="relative">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-sm font-medium">Privacy is on by default</h2>
           <Badge variant="success">Powered by Inco</Badge>
         </div>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Bids are encrypted in the browser and compared privately. Only the winning offer is revealed; losing bids stay hidden. aUSDC settlement remains publicly verifiable.
+          Bids are encrypted in the browser and compared privately. Only the winner is revealed; losing bids stay hidden.
         </p>
+        <div className="mt-2 text-xs text-muted-foreground">Public settlement: <SettlementToken className="ml-1 font-medium text-foreground" /></div>
       </div>
     </section>
   )

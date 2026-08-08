@@ -1,6 +1,15 @@
 import "server-only"
 
-import { createPublicClient, formatUnits, http, parseAbiItem, type Hex } from "viem"
+import {
+  createPublicClient,
+  formatUnits,
+  http,
+  parseAbiItem,
+  type AbiEvent,
+  type GetLogsParameters,
+  type GetLogsReturnType,
+  type Hex,
+} from "viem"
 import { baseSepolia } from "viem/chains"
 
 import type { ActivityRow, EvidenceEvent, Receivable, ReceivableStatus } from "@/lib/bidnox"
@@ -54,6 +63,40 @@ function client() {
   return createPublicClient({ chain: baseSepolia, transport: http(process.env.BASE_SEPOLIA_RPC_URL) })
 }
 
+// Base's public RPC rejects eth_getLogs requests spanning more than 2,000
+// blocks. Keep this below the inclusive provider limit so the same code works
+// with both the public fallback and paid RPC providers.
+const MAX_LOG_BLOCKS = 2_000n
+
+type EventLogQuery<TEvent extends AbiEvent> = {
+  address: NonNullable<GetLogsParameters<TEvent>["address"]>
+  event: TEvent
+  args?: GetLogsParameters<TEvent>["args"]
+}
+
+async function getLogsInChunks<const TEvent extends AbiEvent>(
+  publicClient: ReturnType<typeof client>,
+  query: EventLogQuery<TEvent>,
+  fromBlock: bigint,
+  toBlock: bigint
+): Promise<GetLogsReturnType<TEvent>> {
+  const logs: GetLogsReturnType<TEvent> = []
+
+  for (let start = fromBlock; start <= toBlock; start += MAX_LOG_BLOCKS) {
+    const end = start + MAX_LOG_BLOCKS - 1n < toBlock
+      ? start + MAX_LOG_BLOCKS - 1n
+      : toBlock
+    const chunk = await publicClient.getLogs({
+      ...query,
+      fromBlock: start,
+      toBlock: end,
+    })
+    logs.push(...chunk)
+  }
+
+  return logs
+}
+
 const statusNames: Record<number, ReceivableStatus> = {
   1: "Awaiting buyer", 2: "Buyer confirmed", 3: "Auction open", 4: "Auction closed",
   5: "Funded", 6: "Repaid", 7: "Overdue", 8: "Cancelled",
@@ -66,9 +109,20 @@ const shortAddress = (value: string) => `${value.slice(0, 6)}…${value.slice(-4
 
 async function eventEvidence(receivableId: Hex, auctionId: bigint): Promise<EvidenceEvent[]> {
   const publicClient = client()
+  const latestBlock = await publicClient.getBlockNumber()
   const [registryLogs, auctionLogs] = await Promise.all([
-    Promise.all(registryEvents.map((event) => publicClient.getLogs({ address: BIDNOX_BASE_SEPOLIA.receivableRegistry, event, args: { receivableId }, fromBlock: BIDNOX_BASE_SEPOLIA.deploymentBlock }))).then((groups) => groups.flat()),
-    auctionId > 0n ? Promise.all(auctionEvents.map((event) => publicClient.getLogs({ address: BIDNOX_BASE_SEPOLIA.confidentialAuction, event, args: { auctionId }, fromBlock: BIDNOX_BASE_SEPOLIA.deploymentBlock }))).then((groups) => groups.flat()) : [],
+    Promise.all(registryEvents.map((event) => getLogsInChunks(
+      publicClient,
+      { address: BIDNOX_BASE_SEPOLIA.receivableRegistry, event, args: { receivableId } },
+      BIDNOX_BASE_SEPOLIA.deploymentBlock,
+      latestBlock
+    ))).then((groups) => groups.flat()),
+    auctionId > 0n ? Promise.all(auctionEvents.map((event) => getLogsInChunks(
+      publicClient,
+      { address: BIDNOX_BASE_SEPOLIA.confidentialAuction, event, args: { auctionId } },
+      BIDNOX_BASE_SEPOLIA.deploymentBlock,
+      latestBlock
+    ))).then((groups) => groups.flat()) : [],
   ])
   const labels: Record<string, { event: string; source: EvidenceEvent["source"] }> = {
     ReceivableCreated: { event: "Receivable created", source: "Bidnox" },
@@ -130,7 +184,14 @@ export async function getReceivableById(id: string): Promise<Receivable | undefi
 }
 
 export async function getReceivables(): Promise<Receivable[]> {
-  const logs = await client().getLogs({ address: BIDNOX_BASE_SEPOLIA.receivableRegistry, event: createdEvent, fromBlock: BIDNOX_BASE_SEPOLIA.deploymentBlock })
+  const publicClient = client()
+  const latestBlock = await publicClient.getBlockNumber()
+  const logs = await getLogsInChunks(
+    publicClient,
+    { address: BIDNOX_BASE_SEPOLIA.receivableRegistry, event: createdEvent },
+    BIDNOX_BASE_SEPOLIA.deploymentBlock,
+    latestBlock
+  )
   return (await Promise.all(logs.map((log) => getReceivableById(log.args.receivableId!)))).filter((item): item is Receivable => Boolean(item))
 }
 
