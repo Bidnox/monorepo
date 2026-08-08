@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.28;
 
-import {e} from "@inco/lightning/src/Lib.testnet.sol";
+import {e} from "@inco/lightning/src/Lib.sol";
 import {euint256, ebool} from "@inco/lightning/src/Types.sol";
 import {DecryptionAttestation} from "@inco/lightning/src/lightning-parts/DecryptionAttester.types.sol";
 import {IncoUtils} from "@inco/lightning/src/periphery/IncoUtils.sol";

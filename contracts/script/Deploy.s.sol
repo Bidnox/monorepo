@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 
-import {inco} from "@inco/lightning/src/Lib.testnet.sol";
+import {inco} from "@inco/lightning/src/Lib.sol";
 
 import {ComplianceGate} from "../src/ComplianceGate.sol";
 import {ReceivableRegistry} from "../src/ReceivableRegistry.sol";
@@ -122,6 +122,8 @@ contract Deploy is Script {
         address complianceSigner,
         address settlementAsset
     ) internal {
+        vm.createDir("./deployments", true);
+
         string memory contractsKey = "contracts";
         vm.serializeAddress(contractsKey, "complianceGate", address(gate));
         vm.serializeAddress(contractsKey, "receivableRegistry", address(registry));

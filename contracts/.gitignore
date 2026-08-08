@@ -12,6 +12,7 @@ docs/
 
 # Dotenv file
 .env
+.env.deployment
 out-test/
 cache-test/
 deployments/*.json
