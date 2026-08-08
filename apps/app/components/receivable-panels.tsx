@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, FileText, ShieldCheck } from "lucide-react"
+import { Check, FileText, LockKeyhole, ShieldCheck } from "lucide-react"
 
 import type { EvidenceEvent, Receivable } from "@/lib/bidnox"
 import {
@@ -40,6 +40,25 @@ function DetailRows({
         </div>
       ))}
     </dl>
+  )
+}
+
+export function PrivacySummary() {
+  return (
+    <section className="flex items-start gap-3 rounded-xl border border-success/20 bg-success/5 p-4">
+      <div className="grid size-9 shrink-0 place-items-center rounded-full bg-success/10 text-success-foreground">
+        <LockKeyhole className="size-4" aria-hidden="true" />
+      </div>
+      <div>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-sm font-medium">Privacy is on by default</h2>
+          <Badge variant="success">Powered by Inco</Badge>
+        </div>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          Bids are encrypted in the browser and compared privately. Only the winning offer is revealed; losing bids stay hidden. aUSDC settlement remains publicly verifiable.
+        </p>
+      </div>
+    </section>
   )
 }
 

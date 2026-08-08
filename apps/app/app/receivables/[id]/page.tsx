@@ -8,6 +8,7 @@ import {
   CompliancePanel,
   DocumentPanel,
   EvidenceTimeline,
+  PrivacySummary,
   RepaymentPanel,
   SettlementPanel,
 } from "@/components/receivable-panels"
@@ -26,9 +27,10 @@ export default async function ReceivableDetailPage({
   const receivable = await getReceivableById(id)
 
   if (!receivable) notFound()
+  const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true"
 
   return (
-    <div className="space-y-7">
+    <div className={demoMode ? "mx-auto max-w-4xl space-y-6" : "space-y-7"}>
       <Link
         href="/receivables"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
@@ -38,8 +40,10 @@ export default async function ReceivableDetailPage({
       </Link>
       <PageHeader
         title={receivable.reference}
-        description={`${receivable.seller} → ${receivable.buyer}`}
+        description={demoMode ? "One real Base Sepolia financing lifecycle" : `${receivable.seller} → ${receivable.buyer}`}
       />
+
+      {demoMode ? <PrivacySummary /> : null}
 
       <div className="grid grid-cols-2 divide-x rounded-xl border sm:grid-cols-3">
         <div className="p-4">
@@ -61,7 +65,21 @@ export default async function ReceivableDetailPage({
 
       <ReceivableActions receivable={receivable} />
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1.7fr)_minmax(17rem,0.8fr)]">
+      {demoMode ? (
+        <div className="space-y-6">
+          <AuctionPanel receivable={receivable} />
+          <details className="group rounded-xl border p-4">
+            <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium [&::-webkit-details-marker]:hidden">
+              Technical details & onchain evidence
+              <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(17rem,0.8fr)]">
+              <div className="space-y-8"><SettlementPanel receivable={receivable} /><RepaymentPanel receivable={receivable} /><EvidenceTimeline receivable={receivable} /></div>
+              <aside className="space-y-5"><DocumentPanel receivable={receivable} /><CompliancePanel receivable={receivable} /></aside>
+            </div>
+          </details>
+        </div>
+      ) : <div className="grid gap-8 lg:grid-cols-[minmax(0,1.7fr)_minmax(17rem,0.8fr)]">
         <div className="min-w-0 space-y-8">
           <AuctionPanel receivable={receivable} />
           <SettlementPanel receivable={receivable} />
@@ -80,7 +98,7 @@ export default async function ReceivableDetailPage({
           <DocumentPanel receivable={receivable} />
           <CompliancePanel receivable={receivable} />
         </aside>
-      </div>
+      </div>}
     </div>
   )
 }

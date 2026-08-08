@@ -73,6 +73,11 @@ const NAVIGATION = {
   ],
 } as const
 
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true"
+const DEMO_NAVIGATION = [
+  { href: "/receivables", label: "Live demo", icon: Files, exact: false },
+] as const
+
 const subscribe = () => () => undefined
 const getClientSnapshot = () => true
 const getServerSnapshot = () => false
@@ -117,7 +122,7 @@ export function AppSidebar({
         <SidebarGroup className="px-3">
           <SidebarGroupContent>
             <SidebarMenu>
-              {(role ? NAVIGATION[role] : NAVIGATION.supplier).map((item) => {
+              {(DEMO_MODE ? DEMO_NAVIGATION : role ? NAVIGATION[role] : NAVIGATION.supplier).map((item) => {
                 const active =
                   item.href === "/receivables"
                     ? pathname === item.href || pathname.startsWith(`${item.href}/`)
@@ -309,7 +314,7 @@ function AppExperience({
 
   const walletKey = walletAddress?.toLowerCase() ?? null
   const roleReady = !walletKey || selection?.wallet === walletKey
-  const role = roleReady ? (selection?.role ?? null) : null
+  const role = DEMO_MODE ? "supplier" : roleReady ? (selection?.role ?? null) : null
   const RoleIcon = role === "supplier" ? Factory : Landmark
 
   function selectRole(nextRole: AppRole) {
@@ -341,7 +346,7 @@ function AppExperience({
           <div className="md:hidden">
             <SidebarTrigger />
           </div>
-          {role && walletAddress && !wrongNetwork ? (
+          {!DEMO_MODE && role && walletAddress && !wrongNetwork ? (
             <Button
               variant="ghost"
               size="xs"
@@ -368,7 +373,7 @@ function AppExperience({
             />
           ) : wrongNetwork ? (
             <NetworkSwitchGate onAction={onSwitchNetwork} />
-          ) : !roleReady ? null : !role ? (
+          ) : !DEMO_MODE && !roleReady ? null : !role ? (
             <RoleOnboarding onSelect={selectRole} />
           ) : (
             children

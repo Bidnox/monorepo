@@ -33,10 +33,10 @@ function Rows({
       <TableHeader>
         <TableRow>
           <TableHead>{compact ? "Invoice" : "Reference"}</TableHead>
-          <TableHead>Buyer</TableHead>
+          {!compact ? <TableHead>Buyer</TableHead> : null}
           <TableHead>Face value</TableHead>
-          <TableHead>{compact ? "Best status" : "Advance"}</TableHead>
-          <TableHead>{compact ? "Due date" : "Due"}</TableHead>
+          {!compact ? <TableHead>Advance</TableHead> : null}
+          {!compact ? <TableHead>Due</TableHead> : null}
           <TableHead>Status</TableHead>
           <TableHead className="hidden w-8 md:table-cell">
             <span className="sr-only">Open</span>
@@ -62,26 +62,20 @@ function Rows({
             <TableCell className="font-medium">
               {receivable.reference}
             </TableCell>
-            <TableCell>
+            {!compact ? <TableCell>
               <CompanyIdentity name={receivable.buyer} />
-            </TableCell>
+            </TableCell> : null}
             <TableCell>
               <Money value={receivable.faceValue} />
             </TableCell>
-            <TableCell>
-              {compact ? (
-                receivable.status === "Auction open" ? (
-                  "Auction open"
-                ) : (
-                  receivable.status
-                )
-              ) : receivable.advance ? (
+            {!compact ? <TableCell>
+              {receivable.advance ? (
                 <Money value={receivable.advance} />
               ) : (
                 <span className="text-muted-foreground">—</span>
               )}
-            </TableCell>
-            <TableCell>{receivable.dueShort}</TableCell>
+            </TableCell> : null}
+            {!compact ? <TableCell>{receivable.dueShort}</TableCell> : null}
             <TableCell>
               <ReceivableStatus status={receivable.status} />
             </TableCell>
