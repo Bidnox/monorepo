@@ -134,6 +134,19 @@ export function permitRequestMessage(caller: Address, action: PermitAction, subj
   ].join("\n")
 }
 
+export function invoiceUploadRequestMessage(caller: Address, issuedAt: number) {
+  return [
+    "Authorize Bidnox invoice upload",
+    `Chain: ${BIDNOX_BASE_SEPOLIA.chainId}`,
+    `Caller: ${getAddress(caller)}`,
+    `Issued at: ${issuedAt}`,
+  ].join("\n")
+}
+
+export const DEMO_DOCUMENT_HASH = keccak256(
+  stringToHex("bidnox-demo-invoice-document-v1")
+)
+
 export function deserializePermit(value: Record<string, string>): CompliancePermit {
   return {
     wallet: getAddress(value.wallet), action: value.action as Hex,

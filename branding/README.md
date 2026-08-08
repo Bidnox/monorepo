@@ -1,6 +1,6 @@
 # bidnox branding
 
-Invoice rows with the total sealed. The rows sit back in grey so the emerald seal is
+Invoice rows with the lender bid sealed. The rows sit back in grey so the emerald seal is
 the thing you look at.
 
 Two kits, no light/dark split. Every colour is chosen to read on paper **and** on ink,

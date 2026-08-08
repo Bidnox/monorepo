@@ -50,7 +50,7 @@ bun run build
 
 ## Brand
 
-Invoice rows with the total sealed. Two kits, `colour` and `mono`, both readable on any
+Invoice rows with the lender bid sealed. Two kits, `colour` and `mono`, both readable on any
 background so there is no light/dark split. Assets and rules in
 [branding/](branding/README.md), everything at a glance in `branding/preview.png`.
 
@@ -67,3 +67,11 @@ import { Logo, LogoMark } from "@/components/logo"
 Rows are `zinc-500`, the seal is `emerald-500`. Emerald marks sealed or encrypted
 values, and nothing else. Favicons use the Next file convention: `apps/*/app/icon.svg`
 and `apple-icon.png`.
+
+## App modes and invoice storage
+
+`NEXT_PUBLIC_DEMO_MODE=true` provides one-click form fixtures and a deterministic
+invoice hash. Transactions are still signed by the connected wallet, mined on Base
+Sepolia, and checked for a successful receipt. With demo mode disabled, invoice PDFs
+or images are uploaded to Pinata's private IPFS network through a wallet-authorized,
+Cleanverse-gated server route. `PINATA_JWT` is server-only.

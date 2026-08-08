@@ -58,7 +58,9 @@ Cleanverse must determine whether wallets may enter and whether the settlement a
 
 ### Why confidentiality?
 
-Only the lender’s advance offer has a strong privacy case. A public live bid can expose a lender’s risk appetite and pricing strategy, invite copying/last-look behavior, and reveal the seller’s financing cost before the auction is final. A sealed auction makes lenders price independently. The tradeoff is reduced public price transparency; therefore Bidnox reveals the winning advance/terms to the parties and keeps a verifiable close result. Identities, compliance decisions, invoice state, and Cleanverse asset are not hidden.
+Only the lender’s advance offer has a strong privacy case. A public live bid can expose a lender’s risk appetite and pricing strategy, invite copying/last-look behavior, and reveal the seller’s financing cost before the auction is final. A sealed auction makes lenders price independently. The tradeoff is reduced public price transparency; therefore Bidnox reveals the winning advance/terms to the parties and keeps a verifiable close result. Identities, compliance decisions, invoice state, face value, seller reserve, and Cleanverse asset are not hidden.
+
+We explicitly do **not** claim that Inco hides the invoice total. The deployed registry stores face value in plaintext, and the auction stores its reserve in plaintext. That is acceptable for this demo because eligible lenders need the invoice amount to underwrite an advance, while Inco protects the competing offers and running winner until close. Encrypting only face value or reserve would add complexity without end-to-end confidentiality: ordinary ERC-20 aUSDC funding and repayment transfers expose their amounts on-chain. A future private-notional version would need access-controlled invoice data plus confidential settlement, not a cosmetic encrypted field.
 
 ### Why not an existing invoice platform?
 
@@ -138,6 +140,8 @@ In India, operating a TReDS platform requires RBI authorization. Bidnox must be 
 6. **Failure states:** high value because a judge sees that Cleanverse changes execution in seconds.
 7. **Compliance timeline:** essential UX translation layer, provided each item names its source.
 8. **Audit report:** use the Cleanverse label only for an actual downloaded report. Everything else is “Bidnox evidence timeline.”
+
+All interactive writes wait for a mined receipt and accept the action only when `receipt.status === "success"`. Demo mode changes defaults and the invoice fixture hash only; it never simulates a transaction.
 
 ## Feature value/risk matrix
 

@@ -125,6 +125,14 @@ Compliance permits stay short-lived and server-signed. Before issuing one, the s
 
 The current demo deployment records the buyer test wallet as the compliance signer. That is workable for this sandbox deployment, but it couples a participant key to backend policy signing. Before any production or value-bearing deployment, rotate the gate to a dedicated signer kept in a managed signing service, retain the existing two-minute permit lifetime, and add persistent challenge nonces plus rate limiting at the API edge.
 
+`NEXT_PUBLIC_DEMO_MODE=true` is a presentation aid, not a simulated-chain mode. It fills the known sandbox buyer, a unique invoice reference, a small aUSDC amount, a due date, short auction timing, reserve, and bid defaults. It substitutes a deterministic demo document hash so the presenter does not need to choose a file. Wallet signatures, Cleanverse verification, Inco encryption, aUSDC approvals, contract writes, and mined receipt checks remain real. Every write path rejects a reverted receipt.
+
+With demo mode disabled, the seller selects a PDF or image. A fresh wallet signature authorizes the upload, the server confirms the uploader's Cleanverse eligibility, and the server sends the file to Pinata's private IPFS network using a server-only JWT. The contract stores only `keccak256("ipfs://<cid>")`; neither Pinata credentials nor raw invoice contents are placed on-chain or returned in the public receivable list.
+
+### Inco privacy boundary
+
+The current Inco use is necessary for sealed lender competition: each offer and the running highest bid/index stay encrypted during bidding, and losing values are never revealed. Inco does not hide the invoice face value or auction reserve. That is intentional for this version. Lenders need notional context to price an advance, and normal aUSDC transfers publicly reveal the winning funding and repayment amounts anyway. Hiding the invoice total alone would therefore overstate privacy. True private notional would require confidential settlement and participant-only document/amount access as a separate protocol design.
+
 ## Original next reproducible demo step (completed)
 
 Deploy the hardened Bidnox contracts with the configured aUSDC contract, then run one small-value lifecycle using the three wallets above. Keep the amount comfortably below `5 aUSDC` so the buyer can repay and the financier can fund without another faucet call. Capture the create, buyer-confirm, encrypted bid, auction close, financing transfer, and repayment transaction hashes as they happen.
