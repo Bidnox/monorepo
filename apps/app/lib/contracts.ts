@@ -6,4 +6,5 @@ export const BIDNOX_BASE_SEPOLIA = {
   incoExecutor: "0x4b9911b0191B0b6a6eA8F2Ed562e20Cff5AC8624",
   aUSDC: "0xaC0893567D43C3E7e6e35a72803df05416C1f20D",
   explorer: "https://sepolia.basescan.org",
+  deploymentBlock: 45207029n,
 } as const

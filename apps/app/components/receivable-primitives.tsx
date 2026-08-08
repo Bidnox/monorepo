@@ -13,17 +13,17 @@ import {
   Sparkles,
 } from "lucide-react"
 
-import type { ReceivableStatus as ReceivableStatusValue } from "@/lib/demo-data"
-import { formatMoney } from "@/lib/demo-data"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import type { ReceivableStatus as ReceivableStatusValue } from "@/lib/bidnox"
+import { formatMoney } from "@/lib/bidnox"
 import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { toastManager } from "@/components/ui/toast"
 import { cn } from "@/lib/utils"
+import { BIDNOX_BASE_SEPOLIA } from "@/lib/contracts"
 
 export const CLEANVERSE_AUSDC = {
   name: "Access USDC",
   symbol: "aUSDC",
-  address: "0xaC0893567D43C3E7e6e35a72803df05416C1f20D",
+  address: BIDNOX_BASE_SEPOLIA.aUSDC,
   chainId: 84532,
   image: "/tokens/cleanverse-ausdc.svg",
 } as const
@@ -114,18 +114,6 @@ export function CompanyIdentity({ name }: { name: string }) {
   )
 }
 
-export function FinancierIdentity() {
-  return (
-    <span className="inline-flex items-center gap-2">
-      <Avatar className="size-6 border">
-        <AvatarImage src="/avatars/lender.svg" alt="" draggable={false} />
-        <AvatarFallback>LF</AvatarFallback>
-      </Avatar>
-      <Address value="0x817…924" />
-    </span>
-  )
-}
-
 const SOURCE_ICONS = {
   Bidnox: Sparkles,
   Inco: LockKeyhole,
@@ -153,7 +141,6 @@ export function CleanverseStatus({ verified = true }: { verified?: boolean }) {
 }
 
 const STATUS_VARIANTS: Record<ReceivableStatusValue, BadgeProps["variant"]> = {
-  Draft: "secondary",
   "Awaiting buyer": "warning",
   "Buyer confirmed": "info",
   "Auction open": "success",
@@ -161,6 +148,7 @@ const STATUS_VARIANTS: Record<ReceivableStatusValue, BadgeProps["variant"]> = {
   Funded: "success",
   Repaid: "outline",
   Overdue: "error",
+  Cancelled: "error",
 }
 
 export function ReceivableStatus({

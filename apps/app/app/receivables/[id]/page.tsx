@@ -4,10 +4,6 @@ import { ArrowLeft, ChevronDown } from "lucide-react"
 
 import { PageHeader } from "@/components/page-header"
 import {
-  BuyerConfirmationDialog,
-  PrivateBidDialog,
-} from "@/components/receivable-dialogs"
-import {
   AuctionPanel,
   CompliancePanel,
   DocumentPanel,
@@ -16,12 +12,9 @@ import {
   SettlementPanel,
 } from "@/components/receivable-panels"
 import { Money, ReceivableStatus } from "@/components/receivable-primitives"
-import { Button } from "@/components/ui/button"
-import { getReceivable, RECEIVABLES } from "@/lib/demo-data"
+import { getReceivableById } from "@/lib/server/bidnox"
 
-export function generateStaticParams() {
-  return RECEIVABLES.map((receivable) => ({ id: receivable.id }))
-}
+export const dynamic = "force-dynamic"
 
 export default async function ReceivableDetailPage({
   params,
@@ -29,18 +22,9 @@ export default async function ReceivableDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const receivable = getReceivable(id)
+  const receivable = await getReceivableById(id)
 
   if (!receivable) notFound()
-
-  const action =
-    receivable.status === "Awaiting buyer" ? (
-      <BuyerConfirmationDialog receivable={receivable} />
-    ) : receivable.status === "Auction open" ? (
-      <PrivateBidDialog receivable={receivable} />
-    ) : receivable.status === "Buyer confirmed" ? (
-      <Button>Open auction</Button>
-    ) : undefined
 
   return (
     <div className="space-y-7">
@@ -54,7 +38,6 @@ export default async function ReceivableDetailPage({
       <PageHeader
         title={receivable.reference}
         description={`${receivable.seller} → ${receivable.buyer}`}
-        actions={action}
       />
 
       <div className="grid grid-cols-2 divide-x rounded-xl border sm:grid-cols-3">
@@ -64,7 +47,10 @@ export default async function ReceivableDetailPage({
         </div>
         <div className="p-4">
           <p className="text-xs text-muted-foreground">Face value</p>
-          <Money value={receivable.faceValue} className="mt-1 block font-medium" />
+          <Money
+            value={receivable.faceValue}
+            className="mt-1 block font-medium"
+          />
         </div>
         <div className="col-span-2 border-t p-4 sm:col-span-1 sm:border-t-0">
           <p className="text-xs text-muted-foreground">Due date</p>

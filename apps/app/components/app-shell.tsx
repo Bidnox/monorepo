@@ -8,7 +8,6 @@ import { useTheme } from "next-themes"
 import {
   Activity,
   Factory,
-  FilePlus2,
   Files,
   Landmark,
   LayoutDashboard,
@@ -59,12 +58,6 @@ const NAVIGATION = {
       label: "Receivables",
       icon: Files,
       exact: false,
-    },
-    {
-      href: "/receivables/new",
-      label: "Create receivable",
-      icon: FilePlus2,
-      exact: true,
     },
     { href: "/activity", label: "Activity", icon: Activity, exact: false },
   ],
@@ -127,9 +120,7 @@ export function AppSidebar({
               {(role ? NAVIGATION[role] : NAVIGATION.supplier).map((item) => {
                 const active =
                   item.href === "/receivables"
-                    ? pathname === item.href ||
-                      (pathname.startsWith(`${item.href}/`) &&
-                        pathname !== "/receivables/new")
+                    ? pathname === item.href || pathname.startsWith(`${item.href}/`)
                     : item.exact
                       ? pathname === item.href
                       : pathname === item.href ||

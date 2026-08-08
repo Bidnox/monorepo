@@ -3,27 +3,19 @@
 import * as React from "react"
 import { Check, FileText, ShieldCheck } from "lucide-react"
 
-import {
-  CLOSED_EVIDENCE_EVENTS,
-  EVIDENCE_EVENTS,
-  type EvidenceEvent,
-  type Receivable,
-} from "@/lib/demo-data"
+import type { EvidenceEvent, Receivable } from "@/lib/bidnox"
 import {
   CompanyIdentity,
   CopyableAddress,
-  FinancierIdentity,
   Money,
   SettlementToken,
   SourceBadge,
   TransactionLink,
 } from "@/components/receivable-primitives"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardPanel, CardTitle } from "@/components/ui/card"
 import {
   Empty,
-  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -102,9 +94,6 @@ export function AuctionPanel({ receivable }: { receivable: Receivable }) {
                 No auction has been opened for this receivable.
               </EmptyDescription>
             </EmptyHeader>
-            <EmptyContent>
-              <Button size="sm">Open auction</Button>
-            </EmptyContent>
           </Empty>
         </div>
       ) : null}
@@ -113,19 +102,15 @@ export function AuctionPanel({ receivable }: { receivable: Receivable }) {
         <div className="border-y py-5">
           <div className="grid gap-6 sm:grid-cols-3">
             <div>
-              <p className="text-xs text-muted-foreground">Auction closes in</p>
-              <p className="mt-1 text-xl font-medium tabular-nums">01:42:18</p>
+              <p className="text-xs text-muted-foreground">Auction closes</p>
+              <p className="mt-1 text-xl font-medium tabular-nums">
+                {receivable.auctionClosesAt ?? "—"}
+              </p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Private bids</p>
               <p className="mt-1 text-xl font-medium tabular-nums">
                 {receivable.bidders ?? 0}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Your bid</p>
-              <p className="mt-1 text-xl font-medium">
-                <Money value={900_000} />
               </p>
             </div>
           </div>
@@ -140,25 +125,30 @@ export function AuctionPanel({ receivable }: { receivable: Receivable }) {
         <div className="border-y py-5">
           <p className="text-xs text-muted-foreground">Winning offer</p>
           <p className="mt-1 text-2xl font-medium">
-            <Money value={receivable.advance ?? 920_000} />
+            <Money value={receivable.advance ?? 0} />
           </p>
           <DetailRows
             rows={[
-              { label: "Financier", value: <FinancierIdentity /> },
+              {
+                label: "Financier",
+                value: receivable.financier ? (
+                  <CopyableAddress value={receivable.financier} />
+                ) : (
+                  "—"
+                ),
+              },
               {
                 label: "Discount",
                 value: (
                   <Money
-                    value={
-                      receivable.faceValue - (receivable.advance ?? 920_000)
-                    }
+                    value={receivable.faceValue - (receivable.advance ?? 0)}
                   />
                 ),
               },
             ]}
           />
           <p className="text-sm text-muted-foreground">
-            2 losing bids remain private.
+            {Math.max(receivable.bidders - 1, 0)} losing bids remain private.
           </p>
         </div>
       ) : null}
@@ -173,15 +163,7 @@ export function EvidenceTimeline({
   receivable: Receivable
   showHeading?: boolean
 }) {
-  const events: EvidenceEvent[] =
-    receivable.evidenceEvents ??
-    (["Funded", "Repaid", "Auction closed"].includes(receivable.status)
-      ? CLOSED_EVIDENCE_EVENTS
-      : receivable.status === "Awaiting buyer"
-        ? EVIDENCE_EVENTS.slice(0, 1)
-        : receivable.status === "Buyer confirmed"
-          ? EVIDENCE_EVENTS.slice(0, 2)
-          : EVIDENCE_EVENTS)
+  const events: EvidenceEvent[] = receivable.evidenceEvents
 
   return (
     <section>
@@ -222,6 +204,25 @@ export function EvidenceTimeline({
 }
 
 export function CompliancePanel({ receivable }: { receivable: Receivable }) {
+  const [eligible, setEligible] = React.useState<boolean>()
+
+  React.useEffect(() => {
+    Promise.all(
+      [receivable.seller, receivable.buyer].map((address) =>
+        fetch(`/api/cleanverse/status?address=${address}`, { cache: "no-store" })
+          .then((response) => (response.ok ? response.json() : Promise.reject()))
+      )
+    )
+      .then((results) =>
+        setEligible(
+          results.every(
+            (result) => Number(result.verification?.data?.code) === 4
+          )
+        )
+      )
+      .catch(() => setEligible(false))
+  }, [receivable.buyer, receivable.seller])
+
   return (
     <Card
       className="rounded-xl shadow-none"
@@ -230,12 +231,18 @@ export function CompliancePanel({ receivable }: { receivable: Receivable }) {
       <CardHeader className="p-5 pb-2">
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="text-sm">Verification</CardTitle>
-          <Badge variant="success">Eligible</Badge>
+          <Badge variant={eligible === undefined ? "secondary" : eligible ? "success" : "warning"}>
+            {eligible === undefined ? "Checking" : eligible ? "Eligible" : "Review required"}
+          </Badge>
         </div>
       </CardHeader>
       <CardPanel className="px-5 pb-5">
         <p className="text-sm text-muted-foreground">
-          Seller and buyer are verified for this transaction.
+          {eligible === undefined
+            ? "Checking current Cleanverse A-Pass and asset eligibility."
+            : eligible
+              ? "Seller and buyer currently pass the Cleanverse sandbox check."
+              : "One or more participant checks are unavailable or not eligible."}
         </p>
         <div className="mt-4 flex items-center gap-2 text-sm">
           <Check className="size-4 text-success" aria-hidden="true" />
@@ -271,12 +278,9 @@ export function DocumentPanel({ receivable }: { receivable: Receivable }) {
         <div className="mt-1">
           <CopyableAddress
             value={receivable.fingerprint}
-            display="0xf4a1…82de"
+            display={`${receivable.fingerprint.slice(0, 10)}…${receivable.fingerprint.slice(-8)}`}
           />
         </div>
-        <Button variant="secondary" size="sm" className="mt-4 w-full">
-          View document
-        </Button>
       </CardPanel>
     </Card>
   )
@@ -296,9 +300,9 @@ export function AuctionDetails({ receivable }: { receivable: Receivable }) {
       <h2 className="mb-2 text-sm font-medium">Auction</h2>
       <DetailRows
         rows={[
-          { label: "Started", value: "08 Aug, 10:20" },
-          { label: "Closes", value: "08 Aug, 11:00" },
-          { label: "Bidders", value: receivable.bidders ?? 3 },
+          { label: "Started", value: receivable.auctionOpensAt ?? "—" },
+          { label: "Closes", value: receivable.auctionClosesAt ?? "—" },
+          { label: "Bidders", value: receivable.bidders },
           { label: "Privacy", value: "Sealed bids" },
         ]}
       />
@@ -309,7 +313,8 @@ export function AuctionDetails({ receivable }: { receivable: Receivable }) {
 export function SettlementPanel({ receivable }: { receivable: Receivable }) {
   const funded = ["Funded", "Repaid"].includes(receivable.status)
 
-  if (!["Auction closed", "Funded", "Repaid"].includes(receivable.status)) return null
+  if (!["Auction closed", "Funded", "Repaid"].includes(receivable.status))
+    return null
 
   return (
     <section className="border-y py-5">
@@ -317,12 +322,12 @@ export function SettlementPanel({ receivable }: { receivable: Receivable }) {
         <h2 className="text-sm font-medium">
           {funded ? "Funding complete" : "Ready to fund"}
         </h2>
-        <Badge variant="success">Cleanverse preflight</Badge>
+          <Badge variant="outline">Onchain settlement</Badge>
       </div>
       {funded ? (
         <div>
           <p className="text-2xl font-medium">
-            <Money value={receivable.advance ?? 920_000} />
+            <Money value={receivable.advance ?? 0} />
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             <SettlementToken /> sent to {receivable.seller}
@@ -335,28 +340,8 @@ export function SettlementPanel({ receivable }: { receivable: Receivable }) {
         </div>
       ) : (
         <>
-          <div className="grid gap-2 text-sm sm:grid-cols-2">
-            {[
-              { key: "seller", content: "Seller eligible" },
-              { key: "winner", content: "Winner eligible" },
-              {
-                key: "asset",
-                content: (
-                  <span className="inline-flex items-center gap-1">
-                    Settlement asset: <SettlementToken />
-                  </span>
-                ),
-              },
-              { key: "buyer", content: "Buyer confirmed" },
-            ].map((check) => (
-              <div key={check.key} className="flex items-center gap-2">
-                <Check className="size-3.5 text-success" aria-hidden="true" />
-                {check.content}
-              </div>
-            ))}
-          </div>
           <p className="mt-5 text-xs text-muted-foreground">
-            Funding is submitted by the connected winner after server-side A-Pass verification.
+            No funding transfer has been observed for this receivable yet.
           </p>
         </>
       )}

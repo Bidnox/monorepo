@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"
 import { ChevronRight } from "lucide-react"
 
-import type { Receivable } from "@/lib/demo-data"
+import type { Receivable } from "@/lib/bidnox"
 import {
   CompanyIdentity,
   Money,

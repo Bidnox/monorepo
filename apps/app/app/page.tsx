@@ -1,16 +1,42 @@
 import { PageHeader } from "@/components/page-header"
 import { Money } from "@/components/receivable-primitives"
 import { ReceivablesTable } from "@/components/receivables-table"
-import { RECEIVABLES } from "@/lib/demo-data"
+import { getReceivables } from "@/lib/server/bidnox"
 
-const METRICS = [
-  { label: "Outstanding", value: <Money value={1_000_000} /> },
-  { label: "Financed", value: <Money value={920_000} /> },
-  { label: "Active auctions", value: "1" },
-  { label: "Due soon", value: "1" },
-]
+export const dynamic = "force-dynamic"
 
-export default function OverviewPage() {
+export default async function OverviewPage() {
+  const receivables = await getReceivables()
+  const metrics = [
+    {
+      label: "Outstanding",
+      value: (
+        <Money
+          value={receivables
+            .filter((item) => !["Repaid", "Cancelled"].includes(item.status))
+            .reduce((sum, item) => sum + item.faceValue, 0)}
+        />
+      ),
+    },
+    {
+      label: "Financed",
+      value: (
+        <Money
+          value={receivables.reduce(
+            (sum, item) => sum + (item.advance ?? 0),
+            0
+          )}
+        />
+      ),
+    },
+    {
+      label: "Active auctions",
+      value: String(
+        receivables.filter((item) => item.status === "Auction open").length
+      ),
+    },
+    { label: "Total", value: String(receivables.length) },
+  ]
   return (
     <div className="space-y-10">
       <PageHeader
@@ -19,7 +45,7 @@ export default function OverviewPage() {
       />
 
       <section className="grid grid-cols-2 border-y md:grid-cols-4">
-        {METRICS.map((metric, index) => (
+        {metrics.map((metric, index) => (
           <div
             key={metric.label}
             className={`py-5 ${index % 2 === 0 ? "pr-5" : "border-l pl-5"} md:px-6 md:first:pl-0 md:last:pr-0 md:[&:not(:first-child)]:border-l`}
@@ -41,7 +67,7 @@ export default function OverviewPage() {
         </div>
         <ReceivablesTable
           compact
-          receivables={RECEIVABLES.filter((item) =>
+          receivables={receivables.filter((item) =>
             ["Awaiting buyer", "Buyer confirmed", "Auction open"].includes(
               item.status
             )

@@ -1,6 +1,6 @@
 "use client"
 
-import { ACTIVITY } from "@/lib/demo-data"
+import type { ActivityRow } from "@/lib/bidnox"
 import {
   SourceBadge,
   TransactionLink,
@@ -15,23 +15,22 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs"
 
-const FILTERS = ["All", "Cleanverse", "Bidnox", "Inco", "Payments"] as const
-
-export function ActivityTable() {
+export function ActivityTable({ activity }: { activity: ActivityRow[] }) {
+  const filters = ["All", ...new Set(activity.map((row) => row.source))]
   return (
     <Tabs defaultValue="All" className="gap-5">
       <TabsList variant="underline" className="max-w-full overflow-x-auto">
-        {FILTERS.map((filter) => (
+        {filters.map((filter) => (
           <TabsTab key={filter} value={filter}>
             {filter}
           </TabsTab>
         ))}
       </TabsList>
-      {FILTERS.map((filter) => {
+      {filters.map((filter) => {
         const rows =
           filter === "All"
-            ? ACTIVITY
-            : ACTIVITY.filter((row) => row.source === filter)
+            ? activity
+            : activity.filter((row) => row.source === filter)
         return (
           <TabsPanel key={filter} value={filter}>
             <Table>
