@@ -117,6 +117,14 @@ The paid RPC occasionally returned a just-mined stale read and a stale nonce. Th
 
 3Jane is not required for the hackathon's core CVI/CVA story. Its programmable credit and restaking direction could eventually help Bidnox build lender capital markets or credit underwriting, but adding it now would introduce another trust and integration surface without improving the required Cleanverse lifecycle. Keep it as a post-hackathon financing-liquidity research lead, not a dependency in this submission.
 
+## Interactive app notes
+
+The hosted app now builds transactions from the connected browser wallet instead of pretending that writes happened after a timer. The seller can create a receivable and open its auction, the recorded buyer can sign the EIP-712 confirmation, any eligible lender can encrypt and submit a sealed Inco bid, the winning financier can approve and transfer aUSDC, and the recorded buyer can approve and repay aUSDC. Contract addresses remain in one network configuration file because those are deployment settings, not sample business records.
+
+Compliance permits stay short-lived and server-signed. Before issuing one, the server requires a fresh signature from the connected caller, re-derives the action's wallet and subject from contract state, and runs the current Cleanverse check. Funding and repayment need permits for both sides, so the server derives the seller or financier from the receivable rather than accepting those addresses from the browser. The public status endpoint follows the same rule: it accepts a receivable ID, derives its participants on-chain, and returns only the aggregate eligibility result.
+
+The current demo deployment records the buyer test wallet as the compliance signer. That is workable for this sandbox deployment, but it couples a participant key to backend policy signing. Before any production or value-bearing deployment, rotate the gate to a dedicated signer kept in a managed signing service, retain the existing two-minute permit lifetime, and add persistent challenge nonces plus rate limiting at the API edge.
+
 ## Original next reproducible demo step (completed)
 
 Deploy the hardened Bidnox contracts with the configured aUSDC contract, then run one small-value lifecycle using the three wallets above. Keep the amount comfortably below `5 aUSDC` so the buyer can repay and the financier can fund without another faucet call. Capture the create, buyer-confirm, encrypted bid, auction close, financing transfer, and repayment transaction hashes as they happen.
