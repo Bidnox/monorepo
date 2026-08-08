@@ -176,12 +176,12 @@ export function TransactionLink({ hash }: { hash: string }) {
 
   return (
     <a
-      href={`https://sepolia.basescan.org/tx/${hash.replace("…", "")}`}
+      href={`https://sepolia.basescan.org/tx/${hash}`}
       target="_blank"
       rel="noreferrer"
       className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground"
     >
-      {hash}
+      {hash.length > 18 ? `${hash.slice(0, 10)}…${hash.slice(-8)}` : hash}
       <ExternalLink className="size-3" aria-hidden="true" />
     </a>
   )

@@ -23,6 +23,9 @@ export type Receivable = {
   documentSize: string
   fingerprint: string
   bidders?: number
+  evidenceEvents?: EvidenceEvent[]
+  fundingTransaction?: string
+  repaymentTransaction?: string
 }
 
 export type EvidenceEvent = {
@@ -50,6 +53,32 @@ export const DEMO_RECEIVABLE: Receivable = {
 }
 
 export const RECEIVABLES: Receivable[] = [
+  {
+    id: "base-sepolia-live",
+    reference: "BASE-SEPOLIA-LIVE",
+    seller: "0xf653…Aacb",
+    buyer: "0x376b…d5b2",
+    faceValue: 2,
+    advance: 1.8,
+    issueDate: "08 Aug 2026",
+    dueDate: "07 Sep 2026",
+    dueShort: "Sep 07",
+    status: "Repaid",
+    documentName: "private-demo-invoice-v1",
+    documentSize: "Hash only",
+    fingerprint: "0x6cdfb8cb3b095ac224956ee13bd36c1060ab945abd1ff3d5afb9a6d94001058e",
+    bidders: 2,
+    fundingTransaction: "0x163d2e4ed32e6de43a85f0bc6a3876f96269b88087dfac3dcf706cdbc5a8728d",
+    repaymentTransaction: "0x096c5beebcfe1617b2dbd8fb5aa38f4e473d1224328e932ba86d5144071a66a9",
+    evidenceEvents: [
+      { event: "Receivable created", time: "08 Aug", source: "Bidnox", transaction: "0x4e746df0923b624d7738bbf76050f366450a7b591b2f02353d0ac6e84bac0e17" },
+      { event: "Buyer confirmed", time: "08 Aug", source: "Cleanverse", transaction: "0xf6474f57b8edae18c5c3e436175a270fd7ecea25188d55a9f3106b153393cf81" },
+      { event: "Two sealed bids submitted", time: "08 Aug", source: "Inco", transaction: "0x3786107f592aef1373088b29870380ef9fd2f636de9b2850aaaaa81d1e714a76" },
+      { event: "Winner selected: 1.8 aUSDC", time: "08 Aug", source: "Inco", transaction: "0x1c0b73008cd68bbd65c767ee5d8381bf0e134fde06aed011574beed3f1dd6d0b" },
+      { event: "Seller funded in aUSDC", time: "08 Aug", source: "Blockchain", transaction: "0x163d2e4ed32e6de43a85f0bc6a3876f96269b88087dfac3dcf706cdbc5a8728d" },
+      { event: "Buyer repaid 2 aUSDC", time: "08 Aug", source: "Blockchain", transaction: "0x096c5beebcfe1617b2dbd8fb5aa38f4e473d1224328e932ba86d5144071a66a9" },
+    ],
+  },
   DEMO_RECEIVABLE,
   {
     ...DEMO_RECEIVABLE,

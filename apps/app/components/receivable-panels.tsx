@@ -30,7 +30,6 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Separator } from "@/components/ui/separator"
-import { toastManager } from "@/components/ui/toast"
 
 function DetailRows({
   rows,
@@ -174,17 +173,15 @@ export function EvidenceTimeline({
   receivable: Receivable
   showHeading?: boolean
 }) {
-  const events: EvidenceEvent[] = [
-    "Funded",
-    "Repaid",
-    "Auction closed",
-  ].includes(receivable.status)
-    ? CLOSED_EVIDENCE_EVENTS
-    : receivable.status === "Awaiting buyer"
-      ? EVIDENCE_EVENTS.slice(0, 1)
-      : receivable.status === "Buyer confirmed"
-        ? EVIDENCE_EVENTS.slice(0, 2)
-        : EVIDENCE_EVENTS
+  const events: EvidenceEvent[] =
+    receivable.evidenceEvents ??
+    (["Funded", "Repaid", "Auction closed"].includes(receivable.status)
+      ? CLOSED_EVIDENCE_EVENTS
+      : receivable.status === "Awaiting buyer"
+        ? EVIDENCE_EVENTS.slice(0, 1)
+        : receivable.status === "Buyer confirmed"
+          ? EVIDENCE_EVENTS.slice(0, 2)
+          : EVIDENCE_EVENTS)
 
   return (
     <section>
@@ -310,18 +307,9 @@ export function AuctionDetails({ receivable }: { receivable: Receivable }) {
 }
 
 export function SettlementPanel({ receivable }: { receivable: Receivable }) {
-  const [funded, setFunded] = React.useState(receivable.status === "Funded")
-  const [loading, setLoading] = React.useState(false)
+  const funded = ["Funded", "Repaid"].includes(receivable.status)
 
-  if (!["Auction closed", "Funded"].includes(receivable.status)) return null
-
-  async function fund() {
-    setLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 950))
-    setFunded(true)
-    setLoading(false)
-    toastManager.add({ title: "Funding complete", type: "success" })
-  }
+  if (!["Auction closed", "Funded", "Repaid"].includes(receivable.status)) return null
 
   return (
     <section className="border-y py-5">
@@ -339,9 +327,11 @@ export function SettlementPanel({ receivable }: { receivable: Receivable }) {
           <p className="mt-1 text-sm text-muted-foreground">
             <SettlementToken /> sent to {receivable.seller}
           </p>
-          <Button variant="secondary" size="sm" className="mt-4">
-            View transaction
-          </Button>
+          {receivable.fundingTransaction ? (
+            <div className="mt-4">
+              <TransactionLink hash={receivable.fundingTransaction} />
+            </div>
+          ) : null}
         </div>
       ) : (
         <>
@@ -365,9 +355,9 @@ export function SettlementPanel({ receivable }: { receivable: Receivable }) {
               </div>
             ))}
           </div>
-          <Button className="mt-5" loading={loading} onClick={fund}>
-            Fund <Money value={receivable.advance ?? 920_000} />
-          </Button>
+          <p className="mt-5 text-xs text-muted-foreground">
+            Funding is submitted by the connected winner after server-side A-Pass verification.
+          </p>
         </>
       )}
     </section>
@@ -397,6 +387,9 @@ export function RepaymentPanel({ receivable }: { receivable: Receivable }) {
           { label: "Paid to", value: "Winning financier" },
         ]}
       />
+      {receivable.repaymentTransaction ? (
+        <TransactionLink hash={receivable.repaymentTransaction} />
+      ) : null}
     </section>
   )
 }
