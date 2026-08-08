@@ -24,6 +24,10 @@ const ALLOWED_TYPES = new Set([
 ])
 
 export async function POST(request: Request) {
+  if (!request.headers.get("content-type")?.toLowerCase().startsWith("multipart/form-data")) {
+    return Response.json({ error: "Invoice uploads must use multipart form data." }, { status: 400 })
+  }
+
   try {
     const input = await request.formData()
     const file = input.get("file")
