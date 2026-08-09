@@ -2,6 +2,7 @@
 
 import type { ActivityRow } from "@/lib/bidnox"
 import {
+  LocalDateTime,
   SourceBadge,
   TransactionLink,
 } from "@/components/receivable-primitives"
@@ -39,7 +40,7 @@ export function ActivityTable({ activity }: { activity: ActivityRow[] }) {
                   <TableHead>Event</TableHead>
                   <TableHead>Receivable</TableHead>
                   <TableHead>Source</TableHead>
-                  <TableHead>Time</TableHead>
+                  <TableHead>Time (approx.)</TableHead>
                   <TableHead>Transaction</TableHead>
                 </TableRow>
               </TableHeader>
@@ -53,7 +54,19 @@ export function ActivityTable({ activity }: { activity: ActivityRow[] }) {
                         <SourceBadge source={row.source} />
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {row.time}
+                        {row.timestamp ? (
+                          <span
+                            title={
+                              row.blockNumber
+                                ? `Block ${row.blockNumber}`
+                                : undefined
+                            }
+                          >
+                            ≈ <LocalDateTime timestamp={row.timestamp} />
+                          </span>
+                        ) : (
+                          row.time
+                        )}
                       </TableCell>
                       <TableCell>
                         <TransactionLink hash={row.transaction} />

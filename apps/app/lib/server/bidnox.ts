@@ -446,7 +446,8 @@ export async function getActivity(): Promise<ActivityRow[]> {
   const publicClient = client()
 
   try {
-    const latestBlock = await publicClient.getBlockNumber()
+    const latest = await publicClient.getBlock({ blockTag: "latest" })
+    const latestBlock = latest.number
     const recentStart =
       latestBlock >= activityWindow
         ? latestBlock - activityWindow + 1n
@@ -499,12 +500,16 @@ export async function getActivity(): Promise<ActivityRow[]> {
           : typeof auctionId === "bigint"
             ? `Auction #${auctionId}`
             : "—"
+        const estimatedTimestamp =
+          latest.timestamp - (latestBlock - log.blockNumber) * 2n
 
         return [
           {
             ...label,
             receivable: reference,
-            time: `Block ${log.blockNumber}`,
+            time: `≈ ${date(estimatedTimestamp)}`,
+            timestamp: Number(estimatedTimestamp),
+            blockNumber: Number(log.blockNumber),
             transaction: log.transactionHash,
           },
         ]

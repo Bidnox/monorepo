@@ -54,7 +54,11 @@ export type Receivable = {
   repaymentTransaction?: string
 }
 
-export type ActivityRow = EvidenceEvent & { receivable: string }
+export type ActivityRow = EvidenceEvent & {
+  receivable: string
+  timestamp?: number
+  blockNumber?: number
+}
 
 export function formatMoney(value: number) {
   return new Intl.NumberFormat("en-US", {
