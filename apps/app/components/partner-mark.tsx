@@ -1,4 +1,5 @@
 import Image from "next/image"
+import { ArrowRight } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -52,7 +53,7 @@ export function PartnerRoute() {
   return (
     <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
       <PartnerMark partner="cleanverse" />
-      <span aria-hidden="true">→</span>
+      <ArrowRight className="size-3.5 shrink-0" aria-hidden="true" />
       <PartnerMark partner="inco" />
     </span>
   )

@@ -556,6 +556,7 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
   const [sessionReady, setSessionReady] = React.useState<boolean>()
   const [buyerSignature, setBuyerSignature] = React.useState<Hex>()
   const [actionOpen, setActionOpen] = React.useState(false)
+  const [transactionComplete, setTransactionComplete] = React.useState(false)
 
   const caller = address?.toLowerCase()
   const isSeller = caller === receivable.seller.toLowerCase()
@@ -629,9 +630,11 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
     try {
       setBusy(label)
       setHash(undefined)
+      setTransactionComplete(false)
       setMessage(`${label}…`)
       const transaction = await action()
       setHash(transaction)
+      setTransactionComplete(label !== "aUSDC approval")
       setMessage(`${label} confirmed on Base Sepolia.`)
       toastManager.add({ title: `${label} confirmed`, type: "success" })
       router.refresh()
@@ -794,6 +797,7 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
         throw new Error("Auction details are unavailable.")
       setBusy("Winner reveal")
       setHash(undefined)
+      setTransactionComplete(false)
       const auctionId = BigInt(receivable.auctionId)
       const auction = await client.readContract({
         address: BIDNOX_BASE_SEPOLIA.confidentialAuction,
@@ -810,6 +814,7 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
           args: [auctionId],
         })
         setHash(closeHash)
+        setTransactionComplete(true)
         setMessage(
           "Bidding closed. Return when the Inco attestation is ready to finalize the winner."
         )
@@ -886,6 +891,7 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
         ],
       })
       setHash(finalHash)
+      setTransactionComplete(true)
       setMessage("Winner finalized. Losing bid amounts remain sealed.")
       toastManager.add({ title: "Winner finalized", type: "success" })
       router.refresh()
@@ -1103,8 +1109,38 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
         </Button>
       </section>
 
-      <Dialog open={actionOpen} onOpenChange={setActionOpen}>
-        <DialogPopup>
+      <Dialog
+        open={actionOpen}
+        onOpenChange={(open) => {
+          setActionOpen(open)
+          if (!open) {
+            setHash(undefined)
+            setTransactionComplete(false)
+          }
+        }}
+      >
+        <DialogPopup showCloseButton={!transactionComplete}>
+          {transactionComplete && hash ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Transaction successful</DialogTitle>
+              </DialogHeader>
+              <DialogPanel>
+                <a
+                  className="text-sm font-medium underline underline-offset-4"
+                  href={`${BIDNOX_BASE_SEPOLIA.explorer}/tx/${hash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View transaction on BaseScan
+                </a>
+              </DialogPanel>
+              <DialogFooter>
+                <DialogClose render={<Button />}>Close</DialogClose>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
           <DialogHeader>
             <div className="mb-1 flex items-center gap-2">
               <Badge variant="secondary">Next step</Badge>
@@ -1160,16 +1196,14 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
                       </div>
                     </div>
                     {buyerSignature ? (
-                      <div className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05] p-4">
-                        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-emerald-500/10 text-emerald-600">
-                          <Check className="size-4" />
+                      <div className="flex items-center justify-between gap-3 border-y py-3 text-xs">
+                        <span className="text-muted-foreground">
+                          Buyer authorization
                         </span>
-                        <div>
-                          <p className="text-sm font-medium">Signature ready</p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Now record it on Base Sepolia.
-                          </p>
-                        </div>
+                        <span className="inline-flex items-center gap-1.5 font-medium">
+                          <Check className="size-3.5" aria-hidden="true" />
+                          Signed
+                        </span>
                       </div>
                     ) : null}
                     {buyerSignature ? (
@@ -1178,7 +1212,7 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
                         loading={busy === "Buyer confirmation"}
                         onClick={confirm}
                       >
-                        Record confirmation
+                        Confirm on Base Sepolia
                       </Button>
                     ) : (
                       <Button
@@ -1431,11 +1465,8 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
             )}
             <ActionStatus hash={hash} message={message} />
           </DialogPanel>
-          <DialogFooter variant="bare">
-            <DialogClose render={<Button variant="ghost" />}>
-              {hash ? "Done" : "Close"}
-            </DialogClose>
-          </DialogFooter>
+            </>
+          )}
         </DialogPopup>
       </Dialog>
     </>
