@@ -28,6 +28,12 @@ The idea is simple: a supplier should be able to find the best advance for a buy
 | Demo video | [Watch the Bidnox demo](https://youtu.be/Lt_ngj1-b0w) |
 | Deployed chain | Base Sepolia, chain ID `84532` |
 
+## Team
+
+| Team member | GitHub |
+| --- | --- |
+| Vishal Sah | [@weshallsah](https://github.com/weshallsah) |
+
 ## Product demo
 
 <p align="center">

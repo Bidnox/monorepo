@@ -34,6 +34,10 @@ Deployment
 - ConfidentialAuction: 0xDA6F7Fe360f7700d6E0d867bDC7f51C048E33c82
 - Cleanverse aUSDC: 0xaC0893567D43C3E7e6e35a72803df05416C1f20D
 
+Team
+
+- Vishal Sah: https://github.com/weshallsah
+
 Thank you for reviewing Bidnox.
 
 Regards,
