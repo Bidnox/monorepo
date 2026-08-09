@@ -67,13 +67,13 @@ export default async function ReceivableDetailPage({
       <ReceivableActions receivable={receivable} />
       <CompliancePanel receivable={receivable} />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.75fr)]">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.75fr)]">
         <div className="min-w-0 space-y-6 rounded-xl border bg-card p-4 sm:p-5">
           <AuctionPanel receivable={receivable} />
           <SettlementPanel receivable={receivable} />
           <RepaymentPanel receivable={receivable} />
         </div>
-        <aside className="space-y-4">
+        <aside className="min-w-0 space-y-4">
           <DocumentPanel receivable={receivable} />
           <Link
             href={`/receivables/${receivable.id}/evidence`}

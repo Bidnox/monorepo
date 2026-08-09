@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ExternalLink, FileText, LockKeyhole, ShieldCheck } from "lucide-react"
+import { ChevronDown, ExternalLink, FileText, LockKeyhole, ShieldCheck } from "lucide-react"
 import { useAccount } from "wagmi"
 
 import type { EvidenceEvent, Receivable } from "@/lib/bidnox"
@@ -232,13 +232,13 @@ export function EvidenceTimeline({
         {events.map((event) => (
           <li
             key={`${event.event}-${event.time}`}
-            className="flex items-center justify-between gap-3 px-3 py-2.5"
+            className="flex min-w-0 flex-col gap-3 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
           >
             <div className="min-w-0">
               <p className="text-sm font-medium">{event.event}</p>
               <p className="mt-1 text-xs text-muted-foreground">{event.time}</p>
             </div>
-            <div className="shrink-0">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
               <SourceBadge source={event.source} />
               {event.transaction ? (
                 <TransactionLink hash={event.transaction} />
@@ -276,30 +276,16 @@ export function CompliancePanel({ receivable }: { receivable: Receivable }) {
       className="rounded-xl shadow-none"
       data-receivable-status={receivable.status}
     >
-      <CardPanel className="p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm">
-            <PartnerMark partner="cleanverse" className="font-medium" />
-            <span className="text-muted-foreground">
-              A-Pass + aUSDC settlement
-            </span>
+      <CardPanel className="p-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div>
+            <PartnerMark partner="cleanverse" className="text-sm font-medium" />
+            <p className="mt-1 text-xs text-muted-foreground">Identity checks and settlement asset</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge
-              variant={
-                !status && !unavailable
-                  ? "secondary"
-                  : status?.eligible
-                    ? "success"
-                    : "warning"
-              }
-            >
-              {!status && !unavailable
-                ? "Checking"
-                : status?.eligible
-                  ? "Eligible"
-                  : "Review"}
-            </Badge>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-medium text-muted-foreground">
+              {!status && !unavailable ? "Checking" : status?.eligible ? "Eligible" : "Review needed"}
+            </span>
             <a
               className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
               href={`${BIDNOX_BASE_SEPOLIA.explorer}/token/${BIDNOX_BASE_SEPOLIA.aUSDC}`}
@@ -311,32 +297,28 @@ export function CompliancePanel({ receivable }: { receivable: Receivable }) {
             </a>
           </div>
         </div>
-        <details className="group mt-3 border-t pt-3 text-xs">
-          <summary className="cursor-pointer text-muted-foreground">
-            Participant verification details
+        <details className="group border-t text-xs">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-muted-foreground [&::-webkit-details-marker]:hidden">
+            <span>
+              {status
+                ? `${status.participants.filter((participant) => participant.verified).length} of ${status.participants.length} participants verified`
+                : unavailable
+                  ? "Verification status unavailable"
+                  : "Checking participants…"}
+            </span>
+            <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
           </summary>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="divide-y border-t">
             {status?.participants.map((participant) => (
               <div
-                className="flex items-center justify-between gap-2 rounded-md bg-muted/50 p-2"
+                className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-4 py-3 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto] sm:gap-3"
                 key={participant.wallet}
               >
-                <div className="min-w-0">
-                  <p className="font-medium">{participant.role}</p>
-                  <p className="truncate font-mono text-muted-foreground">
-                    {participant.wallet}
-                  </p>
-                </div>
-                <Badge variant={participant.verified ? "success" : "warning"}>
-                  {participant.verified ? "Verified" : "Review"}
-                </Badge>
+                <span className="font-medium">{participant.role}</span>
+                <span className="col-span-2 row-start-2 min-w-0 sm:col-span-1 sm:col-start-2 sm:row-start-1"><CopyableAddress value={participant.wallet} display={`${participant.wallet.slice(0, 8)}…${participant.wallet.slice(-6)}`} /></span>
+                <span className="col-start-2 row-start-1 justify-self-end text-muted-foreground sm:col-start-3">{participant.verified ? "Verified" : "Review"}</span>
               </div>
             ))}
-            {!status ? (
-              <p className="text-muted-foreground">
-                {unavailable ? "Status unavailable." : "Checking participants…"}
-              </p>
-            ) : null}
           </div>
         </details>
       </CardPanel>
@@ -449,36 +431,30 @@ export function SettlementPanel({ receivable }: { receivable: Receivable }) {
     return null
 
   return (
-    <section className="border-y py-5">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-medium">
-          {funded ? "Funding complete" : "Ready to fund"}
-        </h2>
-        <Badge variant="outline">
-          <PartnerMark partner="cleanverse" />
-          CVA · aUSDC
-        </Badge>
+    <section className="border-t pt-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-medium">{funded ? "Funding complete" : "Ready to fund"}</h2>
+        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><PartnerMark compact partner="cleanverse" />CVA settlement</span>
       </div>
       {funded ? (
-        <div>
-          <p className="text-2xl font-medium">
-            <Money value={receivable.advance ?? 0} />
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            <SettlementToken /> sent to {receivable.seller}
-          </p>
-          {receivable.fundingTransaction ? (
-            <div className="mt-4">
-              <TransactionLink hash={receivable.fundingTransaction} />
+        <div className="mt-4">
+          <p className="text-2xl font-medium"><Money value={receivable.advance ?? 0} /></p>
+          <p className="mt-1 text-xs text-muted-foreground">Financed in <SettlementToken className="font-medium text-foreground" /></p>
+          <dl className="mt-4 divide-y border-y text-xs">
+            <div className="flex items-center justify-between gap-4 py-3">
+              <dt className="text-muted-foreground">Seller received</dt>
+              <dd><CopyableAddress value={receivable.seller} display={`${receivable.seller.slice(0, 8)}…${receivable.seller.slice(-6)}`} /></dd>
             </div>
-          ) : null}
+            {receivable.fundingTransaction ? (
+              <div className="flex items-center justify-between gap-4 py-3">
+                <dt className="text-muted-foreground">Funding transaction</dt>
+                <dd><TransactionLink hash={receivable.fundingTransaction} /></dd>
+              </div>
+            ) : null}
+          </dl>
         </div>
       ) : (
-        <>
-          <p className="mt-5 text-xs text-muted-foreground">
-            No funding transfer has been observed for this receivable yet.
-          </p>
-        </>
+        <p className="mt-3 text-xs text-muted-foreground">No funding transfer has been observed for this receivable yet.</p>
       )}
     </section>
   )

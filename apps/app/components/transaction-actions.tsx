@@ -380,7 +380,7 @@ export function CreateReceivableForm() {
         <Field>
           <FieldLabel>Due date and time</FieldLabel>
           <input name="dueDate" type="hidden" value={dueDateValue} />
-          <div className="grid w-full grid-cols-[minmax(0,1fr)_8.5rem] gap-2">
+          <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem]">
             <Popover open={dateOpen} onOpenChange={setDateOpen}>
               <PopoverTrigger
                 render={

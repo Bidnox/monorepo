@@ -70,7 +70,7 @@ export function Address({
   value: string
   className?: string
 }) {
-  return <span className={cn("font-mono text-xs", className)}>{value}</span>
+  return <span className={cn("break-all font-mono text-xs", className)}>{value}</span>
 }
 
 export function CopyableAddress({
@@ -93,7 +93,7 @@ export function CopyableAddress({
     <button
       type="button"
       onClick={copy}
-      className="inline-flex items-center gap-1.5 rounded-md font-mono text-xs text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+      className="inline-flex max-w-full min-w-0 items-center gap-1.5 break-all rounded-md text-left font-mono text-xs text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
     >
       {display}
       {copied ? <Check className="size-3" /> : <Copy className="size-3" />}

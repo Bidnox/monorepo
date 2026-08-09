@@ -327,11 +327,11 @@ function AppExperience({
         onSwitchNetwork={onSwitchNetwork}
         onDisconnect={onDisconnect}
       />
-      <SidebarInset>
+      <SidebarInset className="min-w-0 overflow-x-clip">
         <div className="fixed bottom-4 left-4 z-40 rounded-lg border bg-background shadow-md md:hidden">
           <SidebarTrigger />
         </div>
-        <div className="mx-auto w-full max-w-[1240px] flex-1 px-4 py-8 md:px-8 md:py-10">
+        <div className="mx-auto min-w-0 w-full max-w-3xl flex-1 overflow-x-clip px-4 py-8 md:px-6 md:py-10">
           {!mounted ? null : !walletAddress ? (
             <WalletGate
               title="Connect your wallet"
