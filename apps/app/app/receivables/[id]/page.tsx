@@ -1,17 +1,20 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeft, ChevronDown } from "lucide-react"
+import { ArrowLeft, ArrowRight, Blocks } from "lucide-react"
 
 import { PageHeader } from "@/components/page-header"
 import {
   AuctionPanel,
   CompliancePanel,
   DocumentPanel,
-  EvidenceTimeline,
   RepaymentPanel,
   SettlementPanel,
 } from "@/components/receivable-panels"
-import { LocalDateTime, Money, ReceivableStatus } from "@/components/receivable-primitives"
+import {
+  LocalDateTime,
+  Money,
+  ReceivableStatus,
+} from "@/components/receivable-primitives"
 import { ReceivableActions } from "@/components/transaction-actions"
 import { getReceivableById } from "@/lib/server/bidnox"
 
@@ -54,7 +57,10 @@ export default async function ReceivableDetailPage({
         </div>
         <div className="col-span-2 border-t p-3.5 sm:col-span-1 sm:border-t-0 sm:p-4">
           <p className="text-xs text-muted-foreground">Due</p>
-          <LocalDateTime className="mt-1 block text-sm font-medium" timestamp={receivable.dueDateTimestamp} />
+          <LocalDateTime
+            className="mt-1 block text-sm font-medium"
+            timestamp={receivable.dueDateTimestamp}
+          />
         </div>
       </div>
 
@@ -69,15 +75,23 @@ export default async function ReceivableDetailPage({
         </div>
         <aside className="space-y-4">
           <DocumentPanel receivable={receivable} />
-          <details className="group rounded-xl border bg-card p-4">
-            <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium [&::-webkit-details-marker]:hidden">
-              On-chain evidence
-              <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
-            </summary>
-            <div className="pt-4">
-              <EvidenceTimeline receivable={receivable} showHeading={false} />
-            </div>
-          </details>
+          <Link
+            href={`/receivables/${receivable.id}/evidence`}
+            className="group flex items-center gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-muted/35"
+          >
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+              <Blocks className="size-4" aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">
+                On-chain evidence
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                View the complete transaction timeline
+              </span>
+            </span>
+            <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+          </Link>
         </aside>
       </div>
     </div>

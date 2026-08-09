@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/empty"
 import { Separator } from "@/components/ui/separator"
 import { BIDNOX_BASE_SEPOLIA } from "@/lib/contracts"
+import { PartnerMark } from "@/components/partner-mark"
 
 function DetailRows({
   rows,
@@ -56,12 +57,18 @@ export function PrivacySummary() {
       <div className="relative">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-sm font-medium">Privacy is on by default</h2>
-          <Badge variant="success">Powered by Inco</Badge>
+          <Badge variant="success">
+            <PartnerMark partner="inco" />
+          </Badge>
         </div>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Bids are encrypted in the browser and compared privately. Only the winner is revealed; losing bids stay hidden.
+          Bids are encrypted in the browser and compared privately. Only the
+          winner is revealed; losing bids stay hidden.
         </p>
-        <div className="mt-2 text-xs text-muted-foreground">Public settlement: <SettlementToken className="ml-1 font-medium text-foreground" /></div>
+        <div className="mt-2 text-xs text-muted-foreground">
+          Public settlement:{" "}
+          <SettlementToken className="ml-1 font-medium text-foreground" />
+        </div>
       </div>
     </section>
   )
@@ -85,7 +92,10 @@ export function ReceivableSummary({ receivable }: { receivable: Receivable }) {
             label: "Face value",
             value: <Money value={receivable.faceValue} />,
           },
-          { label: "Due date", value: <LocalDateTime timestamp={receivable.dueDateTimestamp} /> },
+          {
+            label: "Due date",
+            value: <LocalDateTime timestamp={receivable.dueDateTimestamp} />,
+          },
           { label: "Settlement", value: <SettlementToken /> },
         ]}
       />
@@ -103,11 +113,16 @@ export function AuctionPanel({ receivable }: { receivable: Receivable }) {
     <section>
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-sm font-medium">Financing</h2>
-        {isActive ? <Badge variant="outline">Private with Inco</Badge> : null}
+        {isActive ? (
+          <Badge variant="outline">
+            <PartnerMark partner="inco" />
+            Private bids
+          </Badge>
+        ) : null}
       </div>
 
       {!isActive && !isClosed ? (
-        <div className="border-y">
+        <div className="rounded-xl bg-muted/30">
           <Empty className="py-10">
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -123,11 +138,14 @@ export function AuctionPanel({ receivable }: { receivable: Receivable }) {
       ) : null}
 
       {isActive ? (
-        <div className="border-y py-5">
+        <div className="rounded-xl bg-muted/30 p-4 sm:p-5">
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
               <p className="text-xs text-muted-foreground">Auction closes</p>
-              <LocalDateTime className="mt-1 block text-xl font-medium" timestamp={receivable.auctionClosesAtTimestamp} />
+              <LocalDateTime
+                className="mt-1 block text-xl font-medium"
+                timestamp={receivable.auctionClosesAtTimestamp}
+              />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Private bids</p>
@@ -143,7 +161,10 @@ export function AuctionPanel({ receivable }: { receivable: Receivable }) {
           {receivable.sealedBids.length ? (
             <div className="mt-4 flex flex-wrap gap-2">
               {receivable.sealedBids.map((bid, index) => (
-                <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs" key={bid.transaction}>
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs"
+                  key={bid.transaction}
+                >
                   Encrypted bid {index + 1}
                   <TransactionLink hash={bid.transaction} />
                 </span>
@@ -154,7 +175,7 @@ export function AuctionPanel({ receivable }: { receivable: Receivable }) {
       ) : null}
 
       {isClosed ? (
-        <div className="border-y py-5">
+        <div className="rounded-xl bg-muted/30 p-4 sm:p-5">
           <p className="text-xs text-muted-foreground">Winning offer</p>
           <p className="mt-1 text-2xl font-medium">
             <Money value={receivable.advance ?? 0} />
@@ -214,14 +235,14 @@ export function EvidenceTimeline({
             className="flex items-center justify-between gap-3 px-3 py-2.5"
           >
             <div className="min-w-0">
-                <p className="text-sm font-medium">{event.event}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{event.time}</p>
+              <p className="text-sm font-medium">{event.event}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{event.time}</p>
             </div>
             <div className="shrink-0">
-                <SourceBadge source={event.source} />
-                {event.transaction ? (
-                  <TransactionLink hash={event.transaction} />
-                ) : null}
+              <SourceBadge source={event.source} />
+              {event.transaction ? (
+                <TransactionLink hash={event.transaction} />
+              ) : null}
             </div>
           </li>
         ))}
@@ -243,25 +264,79 @@ export function CompliancePanel({ receivable }: { receivable: Receivable }) {
       cache: "no-store",
     })
       .then((response) => (response.ok ? response.json() : Promise.reject()))
-      .then((result) => { setStatus(result); setUnavailable(false) })
+      .then((result) => {
+        setStatus(result)
+        setUnavailable(false)
+      })
       .catch(() => setUnavailable(true))
   }, [receivable.id])
 
   return (
-    <Card className="rounded-xl shadow-none" data-receivable-status={receivable.status}>
+    <Card
+      className="rounded-xl shadow-none"
+      data-receivable-status={receivable.status}
+    >
       <CardPanel className="p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm"><ShieldCheck className="size-4 text-emerald-600" /><span className="font-medium">Cleanverse</span><span className="text-muted-foreground">A-Pass + aUSDC settlement</span></div>
+          <div className="flex items-center gap-2 text-sm">
+            <PartnerMark partner="cleanverse" className="font-medium" />
+            <span className="text-muted-foreground">
+              A-Pass + aUSDC settlement
+            </span>
+          </div>
           <div className="flex items-center gap-2">
-            <Badge variant={!status && !unavailable ? "secondary" : status?.eligible ? "success" : "warning"}>{!status && !unavailable ? "Checking" : status?.eligible ? "Eligible" : "Review"}</Badge>
-            <a className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground" href={`${BIDNOX_BASE_SEPOLIA.explorer}/token/${BIDNOX_BASE_SEPOLIA.aUSDC}`} target="_blank" rel="noreferrer"><SettlementToken /><ExternalLink className="size-3" /></a>
+            <Badge
+              variant={
+                !status && !unavailable
+                  ? "secondary"
+                  : status?.eligible
+                    ? "success"
+                    : "warning"
+              }
+            >
+              {!status && !unavailable
+                ? "Checking"
+                : status?.eligible
+                  ? "Eligible"
+                  : "Review"}
+            </Badge>
+            <a
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              href={`${BIDNOX_BASE_SEPOLIA.explorer}/token/${BIDNOX_BASE_SEPOLIA.aUSDC}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <SettlementToken />
+              <ExternalLink className="size-3" />
+            </a>
           </div>
         </div>
         <details className="group mt-3 border-t pt-3 text-xs">
-          <summary className="cursor-pointer text-muted-foreground">Participant verification details</summary>
+          <summary className="cursor-pointer text-muted-foreground">
+            Participant verification details
+          </summary>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {status?.participants.map((participant) => <div className="flex items-center justify-between gap-2 rounded-md bg-muted/50 p-2" key={participant.wallet}><div className="min-w-0"><p className="font-medium">{participant.role}</p><p className="truncate font-mono text-muted-foreground">{participant.wallet}</p></div><Badge variant={participant.verified ? "success" : "warning"}>{participant.verified ? "Verified" : "Review"}</Badge></div>)}
-            {!status ? <p className="text-muted-foreground">{unavailable ? "Status unavailable." : "Checking participants…"}</p> : null}
+            {status?.participants.map((participant) => (
+              <div
+                className="flex items-center justify-between gap-2 rounded-md bg-muted/50 p-2"
+                key={participant.wallet}
+              >
+                <div className="min-w-0">
+                  <p className="font-medium">{participant.role}</p>
+                  <p className="truncate font-mono text-muted-foreground">
+                    {participant.wallet}
+                  </p>
+                </div>
+                <Badge variant={participant.verified ? "success" : "warning"}>
+                  {participant.verified ? "Verified" : "Review"}
+                </Badge>
+              </div>
+            ))}
+            {!status ? (
+              <p className="text-muted-foreground">
+                {unavailable ? "Status unavailable." : "Checking participants…"}
+              </p>
+            ) : null}
           </div>
         </details>
       </CardPanel>
@@ -275,8 +350,11 @@ export function DocumentPanel({ receivable }: { receivable: Receivable }) {
 
   React.useEffect(() => {
     if (!address) return
-    fetch(`/api/pinata/document?receivableId=${receivable.id}&caller=${address}`, { cache: "no-store" })
-      .then((response) => response.ok ? response.json() : Promise.reject())
+    fetch(
+      `/api/pinata/document?receivableId=${receivable.id}&caller=${address}`,
+      { cache: "no-store" }
+    )
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then(setIpfs)
       .catch(() => setIpfs(undefined))
   }, [address, receivable.id])
@@ -301,14 +379,30 @@ export function DocumentPanel({ receivable }: { receivable: Receivable }) {
           </div>
         </div>
         <Separator className="my-4" />
-        <p className="text-xs text-muted-foreground">Onchain document fingerprint</p>
+        <p className="text-xs text-muted-foreground">
+          Onchain document fingerprint
+        </p>
         <div className="mt-1">
           <CopyableAddress
             value={receivable.fingerprint}
             display={`${receivable.fingerprint.slice(0, 10)}…${receivable.fingerprint.slice(-8)}`}
           />
         </div>
-        {ipfs ? <div className="mt-4"><p className="text-xs text-muted-foreground">Private IPFS reference</p><a className="mt-1 inline-flex max-w-full items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground" href={ipfs.reference} rel="noreferrer"><span className="truncate">{ipfs.reference}</span><ExternalLink className="size-3 shrink-0" /></a></div> : null}
+        {ipfs ? (
+          <div className="mt-4">
+            <p className="text-xs text-muted-foreground">
+              Private IPFS reference
+            </p>
+            <a
+              className="mt-1 inline-flex max-w-full items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground"
+              href={ipfs.reference}
+              rel="noreferrer"
+            >
+              <span className="truncate">{ipfs.reference}</span>
+              <ExternalLink className="size-3 shrink-0" />
+            </a>
+          </div>
+        ) : null}
       </CardPanel>
     </Card>
   )
@@ -328,8 +422,18 @@ export function AuctionDetails({ receivable }: { receivable: Receivable }) {
       <h2 className="mb-2 text-sm font-medium">Auction</h2>
       <DetailRows
         rows={[
-          { label: "Started", value: <LocalDateTime timestamp={receivable.auctionOpensAtTimestamp} /> },
-          { label: "Closes", value: <LocalDateTime timestamp={receivable.auctionClosesAtTimestamp} /> },
+          {
+            label: "Started",
+            value: (
+              <LocalDateTime timestamp={receivable.auctionOpensAtTimestamp} />
+            ),
+          },
+          {
+            label: "Closes",
+            value: (
+              <LocalDateTime timestamp={receivable.auctionClosesAtTimestamp} />
+            ),
+          },
           { label: "Bidders", value: receivable.bidders },
           { label: "Privacy", value: "Sealed bids" },
         ]}
@@ -350,7 +454,10 @@ export function SettlementPanel({ receivable }: { receivable: Receivable }) {
         <h2 className="text-sm font-medium">
           {funded ? "Funding complete" : "Ready to fund"}
         </h2>
-          <Badge variant="outline">Cleanverse CVA · aUSDC</Badge>
+        <Badge variant="outline">
+          <PartnerMark partner="cleanverse" />
+          CVA · aUSDC
+        </Badge>
       </div>
       {funded ? (
         <div>
@@ -387,7 +494,9 @@ export function RepaymentPanel({ receivable }: { receivable: Receivable }) {
         <Badge
           variant={receivable.status === "Repaid" ? "success" : "secondary"}
         >
-          {receivable.status === "Repaid" ? "Repaid in aUSDC" : "Awaiting aUSDC repayment"}
+          {receivable.status === "Repaid"
+            ? "Repaid in aUSDC"
+            : "Awaiting aUSDC repayment"}
         </Badge>
       </div>
       <p className="text-2xl font-medium">
@@ -395,7 +504,10 @@ export function RepaymentPanel({ receivable }: { receivable: Receivable }) {
       </p>
       <DetailRows
         rows={[
-          { label: "Due", value: <LocalDateTime timestamp={receivable.dueDateTimestamp} /> },
+          {
+            label: "Due",
+            value: <LocalDateTime timestamp={receivable.dueDateTimestamp} />,
+          },
           { label: "Paid by", value: receivable.buyer },
           { label: "Paid to", value: "Winning financier" },
         ]}

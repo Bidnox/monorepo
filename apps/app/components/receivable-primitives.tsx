@@ -9,14 +9,13 @@ import {
   Check,
   Copy,
   ExternalLink,
-  LockKeyhole,
-  ShieldCheck,
 } from "lucide-react"
 
 import type { ReceivableStatus as ReceivableStatusValue } from "@/lib/bidnox"
 import { formatMoney } from "@/lib/bidnox"
 import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { toastManager } from "@/components/ui/toast"
+import { PartnerMark } from "@/components/partner-mark"
 import { cn } from "@/lib/utils"
 import { BIDNOX_BASE_SEPOLIA } from "@/lib/contracts"
 
@@ -116,13 +115,23 @@ export function CompanyIdentity({ name }: { name: string }) {
 
 const SOURCE_ICONS = {
   Bidnox: CircleDot,
-  Inco: LockKeyhole,
-  Cleanverse: ShieldCheck,
   Blockchain: Blocks,
   Payments: Blocks,
 } as const
 
-export function SourceBadge({ source }: { source: keyof typeof SOURCE_ICONS }) {
+export function SourceBadge({
+  source,
+}: {
+  source: "Bidnox" | "Inco" | "Cleanverse" | "Blockchain" | "Payments"
+}) {
+  if (source === "Inco" || source === "Cleanverse") {
+    return (
+      <Badge variant="secondary">
+        <PartnerMark partner={source === "Inco" ? "inco" : "cleanverse"} />
+      </Badge>
+    )
+  }
+
   const Icon = SOURCE_ICONS[source]
   return (
     <Badge variant="secondary">
@@ -133,9 +142,16 @@ export function SourceBadge({ source }: { source: keyof typeof SOURCE_ICONS }) {
 }
 
 export function CleanverseStatus({ verified }: { verified?: boolean }) {
-  if (verified === undefined) return <Badge variant="secondary">A-Pass check</Badge>
+  if (verified === undefined)
+    return (
+      <Badge variant="secondary">
+        <PartnerMark compact partner="cleanverse" />
+        A-Pass check
+      </Badge>
+    )
   return (
     <Badge variant={verified ? "success" : "warning"}>
+      <PartnerMark compact partner="cleanverse" />
       {verified ? "Verified" : "Verification required"}
     </Badge>
   )
@@ -157,7 +173,8 @@ export function ReceivableStatus({
 }: {
   status: ReceivableStatusValue
 }) {
-  const label = status === "Auction closed" ? "Winner selected · awaiting funding" : status
+  const label =
+    status === "Auction closed" ? "Winner selected · awaiting funding" : status
   return <Badge variant={STATUS_VARIANTS[status]}>{label}</Badge>
 }
 
@@ -186,18 +203,30 @@ export function LocalDateTime({
   timestamp?: number
   className?: string
 }) {
-  const hydrated = React.useSyncExternalStore(subscribeToHydration, () => true, () => false)
-  const value = timestamp && hydrated ? new Intl.DateTimeFormat(undefined, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZoneName: "short",
-    }).format(new Date(timestamp * 1000)) : undefined
+  const hydrated = React.useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false
+  )
+  const value =
+    timestamp && hydrated
+      ? new Intl.DateTimeFormat(undefined, {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZoneName: "short",
+        }).format(new Date(timestamp * 1000))
+      : undefined
 
   return (
-    <time className={cn("tabular-nums", className)} dateTime={timestamp ? new Date(timestamp * 1000).toISOString() : undefined}>
+    <time
+      className={cn("tabular-nums", className)}
+      dateTime={
+        timestamp ? new Date(timestamp * 1000).toISOString() : undefined
+      }
+    >
       {value ?? (timestamp ? "Local time" : "—")}
     </time>
   )
