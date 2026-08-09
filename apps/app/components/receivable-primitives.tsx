@@ -236,18 +236,27 @@ const subscribeToHydration = () => () => undefined
 export function LocalDateTime({
   timestamp,
   className,
+  compact = false,
 }: {
   timestamp?: number
   className?: string
+  compact?: boolean
 }) {
   const hydrated = React.useSyncExternalStore(
     subscribeToHydration,
     () => true,
     () => false
   )
-  const value =
-    timestamp && hydrated
-      ? new Intl.DateTimeFormat(undefined, {
+  const value = timestamp && hydrated
+    ? compact
+      ? `${new Intl.DateTimeFormat(undefined, {
+          day: "2-digit",
+          month: "short",
+        }).format(new Date(timestamp * 1000))} · ${new Intl.DateTimeFormat(
+          undefined,
+          { hour: "2-digit", minute: "2-digit" }
+        ).format(new Date(timestamp * 1000))}`
+      : new Intl.DateTimeFormat(undefined, {
           day: "2-digit",
           month: "short",
           year: "numeric",
@@ -255,7 +264,7 @@ export function LocalDateTime({
           minute: "2-digit",
           timeZoneName: "short",
         }).format(new Date(timestamp * 1000))
-      : undefined
+    : undefined
 
   return (
     <time

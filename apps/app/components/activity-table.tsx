@@ -53,7 +53,7 @@ export function ActivityTable({ activity }: { activity: ActivityRow[] }) {
                       <TableCell>
                         <SourceBadge source={row.source} />
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                         {row.timestamp ? (
                           <span
                             title={
@@ -62,7 +62,7 @@ export function ActivityTable({ activity }: { activity: ActivityRow[] }) {
                                 : undefined
                             }
                           >
-                            ≈ <LocalDateTime timestamp={row.timestamp} />
+                            ≈ <LocalDateTime compact timestamp={row.timestamp} />
                           </span>
                         ) : (
                           row.time
