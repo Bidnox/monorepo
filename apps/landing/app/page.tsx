@@ -108,26 +108,17 @@ export default function Page() {
             bids stay sealed
           </h1>
 
-          <div className="mx-auto mt-14 w-full max-w-[26rem]">
-            <div className="relative aspect-[719/1410] w-full">
+          <div className="mx-auto mt-14 w-full max-w-[28rem]">
+            <div className="relative aspect-[898/1752] w-full">
               <Image
-                src="/app-screen/light-mode.png"
-                alt="Bidnox buyer-confirmed receivable and sealed auction"
+                src="/app-screen/real-receivable-phone.webp"
+                alt="Real Bidnox receivable screen shown on an iPhone"
                 draggable={false}
                 fill
                 priority
                 unoptimized
-                sizes="(max-width: 640px) calc(100vw - 3rem), 416px"
-                className="object-contain dark:hidden"
-              />
-              <Image
-                src="/app-screen/dark-mode.png"
-                alt=""
-                draggable={false}
-                fill
-                unoptimized
-                sizes="(max-width: 640px) calc(100vw - 3rem), 416px"
-                className="hidden object-contain dark:block"
+                sizes="(max-width: 640px) calc(100vw - 3rem), 448px"
+                className="object-contain"
               />
             </div>
           </div>
@@ -225,11 +216,11 @@ export default function Page() {
                 target="_blank"
                 rel="noreferrer"
               >
-                <div className="relative flex aspect-[16/9] w-full items-end justify-center overflow-hidden rounded-xl bg-neutral-900">
-                  <div className="relative aspect-[719/1410] w-[38%] translate-y-[14%]">
+                <div className="relative flex aspect-[16/9] w-full items-end justify-center overflow-hidden rounded-xl bg-neutral-950">
+                  <div className="relative aspect-[898/1752] w-[38%] translate-y-[14%]">
                     <Image
-                      src="/app-screen/dark-mode.png"
-                      alt="Bidnox app in dark mode"
+                      src="/app-screen/real-receivable-phone.webp"
+                      alt="Real Bidnox receivable screen on Base Sepolia"
                       draggable={false}
                       fill
                       unoptimized
@@ -239,10 +230,11 @@ export default function Page() {
                   </div>
                 </div>
                 <p className="mt-4 text-[13px] font-semibold">
-                  Every contract is public
+                  Public evidence, private bids
                 </p>
                 <p className="text-[13px] text-muted-foreground">
-                  Follow every receivable, bid and settlement on Base Sepolia.
+                  Follow receivables and settlement on Base Sepolia. Losing bid
+                  amounts stay sealed.
                 </p>
               </Link>
             </div>
