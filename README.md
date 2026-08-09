@@ -22,6 +22,7 @@ The idea is simple: a supplier should be able to find the best advance for a buy
 | --- | --- |
 | Public repository | [Bidnox monorepo](https://github.com/Bidnox/monorepo) |
 | Live product | [app.bidnox.xyz](https://app.bidnox.xyz) |
+| Slide deck | [View the presentation](bidnox-slides.pdf) |
 | One-page summary | [Read the summary](docs/submission/one-page-summary.md) |
 | Demo evidence | [Review the transactions](docs/submission/demo-evidence.md) |
 | Demo video | **TODO: add the final video link** |
