@@ -2,7 +2,7 @@ Subject: Cleanverse Build submission — Bidnox
 
 Hi Cleanverse team,
 
-Please find our submission for the DeFi track: **Bidnox, compliant confidential receivables financing**.
+Please find our submission for the RWA track: **Bidnox, compliant confidential receivables financing**.
 
 - Public GitHub: https://github.com/Bidnox/monorepo
 - Live frontend: https://app.bidnox.xyz

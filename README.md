@@ -14,7 +14,7 @@ The idea is simple: a supplier should be able to find the best advance for a buy
 
 [Website](https://bidnox.xyz) | [Open the app](https://app.bidnox.xyz) | [View deployed contracts](#base-sepolia-deployment)
 
-> Built for the DeFi track of Cleanverse Build: Trusted Assets. Bidnox uses Cleanverse CVI and CVA in the real financing flow.
+> Built for the RWA track of Cleanverse Build: Trusted Assets. Bidnox uses Cleanverse CVI and CVA from receivable issuance through settlement.
 
 ## Hackathon submission
 
