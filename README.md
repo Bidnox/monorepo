@@ -28,6 +28,16 @@ The idea is simple: a supplier should be able to find the best advance for a buy
 | Demo video | [Watch the Bidnox demo](https://youtu.be/Lt_ngj1-b0w) |
 | Deployed chain | Base Sepolia, chain ID `84532` |
 
+## Product demo
+
+<p align="center">
+  <a href="https://youtu.be/Lt_ngj1-b0w">
+    <img src="https://img.youtube.com/vi/Lt_ngj1-b0w/maxresdefault.jpg" alt="Watch the Bidnox product demo" width="960" />
+  </a>
+</p>
+
+<p align="center"><a href="https://youtu.be/Lt_ngj1-b0w">Watch on YouTube</a></p>
+
 ## How it works
 
 ![Bidnox architecture](docs/submission/bidnox-flow.excalidraw.svg)

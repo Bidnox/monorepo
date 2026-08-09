@@ -128,6 +128,31 @@ export default function Page() {
           </p>
         </section>
 
+        <section id="demo" className="px-6 py-16">
+          <div className="mx-auto w-full max-w-295">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <h2 className="text-[clamp(1.6rem,3.4vw,2.4rem)] leading-[1.08] font-bold tracking-[-0.02em]">
+                Product demo
+              </h2>
+              <p className="max-w-sm text-[13px] text-muted-foreground sm:text-right">
+                Watch the complete receivable flow on Base Sepolia.
+              </p>
+            </div>
+
+            <div className="mt-8 aspect-video overflow-hidden rounded-xl border bg-neutral-950">
+              <iframe
+                className="size-full"
+                src="https://www.youtube-nocookie.com/embed/Lt_ngj1-b0w"
+                title="Bidnox product demo"
+                loading="lazy"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </section>
+
         <section id="how" className="px-6 py-16">
           <div className="mx-auto w-full max-w-295">
             <h2 className="max-w-md text-[clamp(1.6rem,3.4vw,2.4rem)] leading-[1.08] font-bold tracking-[-0.02em]">
