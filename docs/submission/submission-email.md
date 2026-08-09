@@ -36,6 +36,7 @@ Deployment
 
 Team
 
+- Vivek Sahu: https://github.com/vwakesahu
 - Vishal Sah: https://github.com/weshallsah
 
 Thank you for reviewing Bidnox.

@@ -32,6 +32,7 @@ The idea is simple: a supplier should be able to find the best advance for a buy
 
 | Team member | GitHub |
 | --- | --- |
+| Vivek Sahu | [@vwakesahu](https://github.com/vwakesahu) |
 | Vishal Sah | [@weshallsah](https://github.com/weshallsah) |
 
 ## Product demo
