@@ -15,7 +15,7 @@ export function SiteFooter() {
         <div>
           <p className="font-heading text-2xl tracking-tight">bidnox</p>
           <p className="mt-3 max-w-56 text-[13px] leading-relaxed text-muted-foreground">
-            Sealed-bid invoice financing. Amounts stay encrypted until settlement.
+            Buyer-confirmed invoice financing where competing offers remain sealed.
           </p>
         </div>
 

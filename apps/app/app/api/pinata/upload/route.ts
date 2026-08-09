@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     if (!jwt) return Response.json({ error: "Pinata is not configured." }, { status: 503 })
 
     const pinataForm = new FormData()
-    pinataForm.set("network", "private")
+    pinataForm.set("network", "public")
     pinataForm.set("file", file, file.name)
     pinataForm.set("name", `bidnox-${caller.slice(2, 10)}-${Date.now()}-${file.name}`)
     const pinataResponse = await fetch("https://uploads.pinata.cloud/v3/files", {

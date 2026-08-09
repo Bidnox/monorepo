@@ -329,7 +329,11 @@ export function CompliancePanel({ receivable }: { receivable: Receivable }) {
 
 export function DocumentPanel({ receivable }: { receivable: Receivable }) {
   const { address } = useAccount()
-  const [ipfs, setIpfs] = React.useState<{ cid: string; reference: string }>()
+  const [ipfs, setIpfs] = React.useState<{
+    cid: string
+    reference: string
+    gatewayUrl?: string
+  }>()
 
   React.useEffect(() => {
     if (!address) return
@@ -374,14 +378,21 @@ export function DocumentPanel({ receivable }: { receivable: Receivable }) {
         {ipfs ? (
           <div className="mt-4">
             <p className="text-xs text-muted-foreground">
-              Private IPFS reference
+              Invoice on IPFS
             </p>
             <a
               className="mt-1 inline-flex max-w-full items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground"
-              href={ipfs.reference}
+              href={
+                ipfs.gatewayUrl || `https://gateway.pinata.cloud/ipfs/${ipfs.cid}`
+              }
+              target="_blank"
               rel="noreferrer"
+              title={ipfs.reference}
             >
-              <span className="truncate">{ipfs.reference}</span>
+              <span className="truncate">
+                {ipfs.gatewayUrl ||
+                  `https://gateway.pinata.cloud/ipfs/${ipfs.cid}`}
+              </span>
               <ExternalLink className="size-3 shrink-0" />
             </a>
           </div>

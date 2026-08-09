@@ -15,7 +15,7 @@ async function findCid(documentHash: Hex) {
   if (!jwt) return undefined
   let pageToken: string | undefined
   for (let page = 0; page < 5; page += 1) {
-    const url = new URL("https://api.pinata.cloud/v3/files/private")
+    const url = new URL("https://api.pinata.cloud/v3/files/public")
     url.searchParams.set("limit", "100")
     if (pageToken) url.searchParams.set("pageToken", pageToken)
     const response = await fetch(url, {
@@ -55,15 +55,19 @@ export async function GET(request: Request) {
     })
     const participants = [receivable.seller, receivable.buyer, receivable.financier].map((value) => value.toLowerCase())
     if (!participants.includes(getAddress(caller).toLowerCase())) {
-      return Response.json({ error: "Only receivable participants can view the private IPFS reference." }, { status: 403 })
+      return Response.json({ error: "Only receivable participants can resolve the IPFS reference." }, { status: 403 })
     }
     const cid = await findCid(receivable.documentHash)
-    if (!cid) return Response.json({ error: "Private IPFS reference not found." }, { status: 404 })
-    return Response.json({ cid, reference: `ipfs://${cid}` }, { headers: { "cache-control": "no-store" } })
+    if (!cid) return Response.json({ error: "IPFS reference not found." }, { status: 404 })
+    const gatewayUrl = `https://gateway.pinata.cloud/ipfs/${cid}`
+    return Response.json(
+      { cid, reference: `ipfs://${cid}`, gatewayUrl },
+      { headers: { "cache-control": "no-store" } }
+    )
   } catch (error) {
     if (error instanceof Error && error.message === "WALLET_SESSION_REQUIRED") {
       return Response.json({ error: "Sign in with the connected wallet first." }, { status: 401 })
     }
-    return Response.json({ error: "Unable to resolve the private IPFS reference." }, { status: 500 })
+    return Response.json({ error: "Unable to resolve the IPFS reference." }, { status: 500 })
   }
 }

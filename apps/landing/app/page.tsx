@@ -2,7 +2,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { sites } from "@bidnox/site-config"
 
-import { AssetBox } from "@/components/asset-box"
 import { MediaTile } from "@/components/media-tile"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
@@ -25,15 +24,15 @@ const STEPS = [
     alt: "Leaderboard of verified lenders bidding",
     title: "Bid",
     lines: [
-      "Banks, NBFCs and fintechs compete.",
-      "No lender sees another bid.",
+      "Verified financiers offer an advance.",
+      "No financier sees another offer.",
     ],
   },
   {
     src: "/assets/working-capital.png",
     alt: "Clean capital for a buyer-confirmed receivable",
     title: "Settle",
-    lines: ["Recheck both parties.", "Move aUSDC to the seller."],
+    lines: ["Reveal the best eligible offer.", "Move aUSDC to the supplier."],
   },
 ]
 
@@ -71,25 +70,24 @@ const ENABLES = [
   },
 ]
 
-// TODO: real numbers
 const STATS = [
-  { value: "—", label: "invoices funded" },
-  { value: "—", label: "verified lenders" },
-  { value: "0", label: "bids ever leaked" },
+  { value: "A-Pass", label: "participant eligibility" },
+  { value: "Inco", label: "sealed bid computation" },
+  { value: "aUSDC", label: "financing and repayment" },
 ]
 
 const FAQ = [
   {
     q: "Who can see my bid?",
-    a: "No other lender. Bids are encrypted when they are submitted. At close, only the winning rate is revealed so the invoice can be funded. Losing bids stay sealed permanently.",
+    a: "No competing financier. Bids are encrypted before submission. At close, the winning financier and winning advance become public so the invoice can be funded. Losing bid amounts stay sealed.",
   },
   {
     q: "What stops the supplier from peeking at bids?",
-    a: "The supplier never holds the key material for an open auction. They see how many bids exist, not what they are.",
+    a: "The supplier receives encrypted bid handles, not plaintext amounts. The app can show who participated and how many bids were submitted, but not the competing values.",
   },
   {
     q: "How is the winning bid chosen?",
-    a: "The best rate above your floor wins at close. The comparison happens over encrypted values, so no intermediate result leaks.",
+    a: "The highest advance at or above the supplier's reserve wins. Inco compares the encrypted values, and an attested result is required to finalize the winner.",
   },
   {
     q: "What if no bid clears my floor?",
@@ -105,9 +103,9 @@ export default function Page() {
       <main>
         <section className="px-6 pt-32 pb-20 text-center sm:pt-40">
           <h1 className="mx-auto max-w-5xl font-heading text-[clamp(2.75rem,9vw,7.5rem)] leading-[0.86] tracking-[-0.03em]">
-            Your lenders
+            Lenders compete
             <br />
-            see nothing
+            bids stay sealed
           </h1>
 
           <div className="mx-auto mt-14 w-full max-w-[26rem]">
@@ -135,7 +133,7 @@ export default function Page() {
           </div>
 
           <p className="mt-6 text-[13px] font-semibold">
-            Sealed-bid invoice financing, for suppliers who hate leaking price.
+            Buyer-confirmed receivables, private offers and auditable aUSDC settlement.
           </p>
         </section>
 
@@ -209,20 +207,24 @@ export default function Page() {
             </h2>
 
             <div className="mt-8 grid gap-5 sm:grid-cols-2">
-              <div>
-                <AssetBox
-                  label="Walkthrough video"
+              <Link href={sites.app.url}>
+                <MediaTile
+                  src="/assets/approved-invoice.png"
+                  alt="A buyer-confirmed receivable in Bidnox"
                   ratio="16 / 9"
-                  tone="bg-muted"
                 />
                 <p className="mt-4 text-[13px] font-semibold">
-                  Watch an auction close
+                  Follow the real workflow
                 </p>
                 <p className="text-[13px] text-muted-foreground">
-                  Ninety seconds, listing to funded.
+                  Create, confirm, bid, fund and repay in the app.
                 </p>
-              </div>
-              <div>
+              </Link>
+              <Link
+                href="https://sepolia.basescan.org/address/0xCad5d39Dc42757969323608a9207B283dbDE3b37"
+                target="_blank"
+                rel="noreferrer"
+              >
                 <div className="relative flex aspect-[16/9] w-full items-end justify-center overflow-hidden rounded-xl bg-neutral-900">
                   <div className="relative aspect-[719/1410] w-[38%] translate-y-[14%]">
                     <Image
@@ -240,9 +242,9 @@ export default function Page() {
                   Every contract is public
                 </p>
                 <p className="text-[13px] text-muted-foreground">
-                  Read them, run them, try to break them.
+                  Follow every receivable, bid and settlement on Base Sepolia.
                 </p>
-              </div>
+              </Link>
             </div>
           </div>
         </section>
@@ -276,10 +278,10 @@ export default function Page() {
             <h2 className="mx-auto max-w-3xl font-heading text-[clamp(2rem,6vw,4.5rem)] leading-[0.9] tracking-[-0.03em] text-primary-foreground">
               Stop leaking
               <br />
-              your pricing
+              competing offers
             </h2>
             <p className="mx-auto mt-6 max-w-md text-[13px] text-primary-foreground/70">
-              Choose your view and enter the private invoice marketplace.
+              Finance a buyer-confirmed invoice without publishing every lender&apos;s price.
             </p>
             <Link
               href={sites.app.url}

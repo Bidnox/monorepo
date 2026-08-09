@@ -13,16 +13,15 @@ export type Site = {
   index: boolean
 }
 
-// TODO: replace placeholder copy
-const tagline = "Private invoice bidding"
+const tagline = "Sealed-bid invoice financing"
 const summary =
-  "Bid on invoices without revealing your numbers. Amounts stay encrypted until settlement."
+  "Verified financiers compete to fund buyer-confirmed invoices without seeing one another's bids."
 
 const ogImage = {
   url: "/og.jpg",
   width: 1200,
   height: 675,
-  alt: `${brand.name}, private invoice bidding`,
+  alt: `${brand.name}, sealed-bid invoice financing`,
 }
 
 export const sites: Record<SiteKey, Site> = {
