@@ -78,12 +78,12 @@ Bidnox is deliberately precise about its privacy guarantees.
 
 This is sealed-bid financing, not anonymous financing or private document storage. The current demo makes invoice evidence publicly viewable on IPFS and protects the commercially sensitive lender offers.
 
-## Cleanverse comes first
+## [Cleanverse](https://www.cleanverse.com/) comes first
 
-Cleanverse is the compliance and settlement layer.
+[Cleanverse](https://www.cleanverse.com/) is the compliance and settlement layer. Its [developer documentation](https://docs.cleanverse.com/) covers the sandbox APIs used by Bidnox.
 
-- **CVI and A-Pass:** The server checks participant eligibility and issues a short-lived EIP-712 permit bound to one wallet, action, receivable and asset. Contracts consume these permits during creation, confirmation, bidding, funding and repayment.
-- **CVA and aUSDC:** The winning financier pays the supplier in Cleanverse aUSDC. The buyer later repays the financier with the same asset.
+- **[CVI and A-Pass](https://docs.cleanverse.com/):** The server checks participant eligibility and issues a short-lived EIP-712 permit bound to one wallet, action, receivable and asset. Contracts consume these permits during creation, confirmation, bidding, funding and repayment.
+- **[CVA and aUSDC](https://sepolia.basescan.org/token/0xaC0893567D43C3E7e6e35a72803df05416C1f20D):** The winning financier pays the supplier in Cleanverse aUSDC. The buyer later repays the financier with the same asset.
 
 API credentials and the compliance signing key stay on the server and never reach the browser.
 

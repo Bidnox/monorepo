@@ -22,6 +22,12 @@ Cleanverse integration
 - CVA: The winning lender funds the seller in Cleanverse aUSDC, and the buyer repays the lender with the same asset.
 - Enforcement: Short-lived permits bind each eligibility check to the wallet, action, receivable, settlement asset, expiry time, and one-time nonce. The contracts reject expired or reused permits.
 
+Cleanverse references
+
+- Cleanverse: https://www.cleanverse.com/
+- Developer documentation: https://docs.cleanverse.com/
+- Base Sepolia aUSDC: https://sepolia.basescan.org/token/0xaC0893567D43C3E7e6e35a72803df05416C1f20D
+
 Inco keeps each lender's offer encrypted during the auction. Only the winning lender and winning amount become public after finalization. Losing bid amounts remain sealed.
 
 We completed one full lifecycle on Base Sepolia with two confidential bids. The winning lender sent 1.8 aUSDC to the seller, the buyer repaid 2 aUSDC, and the receivable reached the Repaid state. The demo evidence page links every transaction.
