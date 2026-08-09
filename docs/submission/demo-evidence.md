@@ -42,13 +42,3 @@ The demo flow calls `verify_apass` before creation, confirmation, each bid, fund
 A fresh sandbox check on 9 August 2026 returned code `4` for the seller, buyer, winning lender, and second lender. Cleanverse documents code `4` as a valid A-Pass with transfer allowed for the requested A-Token.
 
 These are sandbox A-Passes created for the hackathon. They should not be described as production KYC, KYB, bank verification, credit approval, or proof that the invoice itself is genuine.
-
-## What to show in the recording
-
-1. Open [`RCV-6CDFB8CB`](https://app.bidnox.xyz/receivables/0x6cdfb8cb3b095ac224956ee13bd36c1060ab945abd1ff3d5afb9a6d94001058e).
-2. Show the Cleanverse sandbox A-Pass results and the exact aUSDC address.
-3. Open both sealed bid transactions and show that each event contains only the auction ID and bidder.
-4. Open the finalization transaction and show the public winner and `1.8 aUSDC` winning amount.
-5. Explain that the losing bid amount remains absent from public events. Do not disclose its plaintext value in the recording.
-6. Open the funding and repayment transactions and show the aUSDC `Transfer` events.
-7. Finish on the `Repaid` status and the evidence timeline.
