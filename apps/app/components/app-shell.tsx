@@ -176,34 +176,35 @@ export function AppSidebar({
               Connect wallet
             </Button>
           )}
-          <div className="mt-3 flex items-center justify-between border-t border-sidebar-border pt-3">
-            <div className="flex items-center gap-2 text-xs text-sidebar-accent-foreground">
-              {isDark ? (
-                <Moon className="size-3.5" />
-              ) : (
-                <Sun className="size-3.5" />
-              )}
-              Theme
+          <div className="mt-3 space-y-1 border-t border-sidebar-border pt-3 text-xs text-sidebar-accent-foreground">
+            <div className="flex h-8 items-center justify-between rounded-md px-2">
+              <div className="flex items-center gap-2">
+                {isDark ? (
+                  <Moon className="size-4 shrink-0" aria-hidden="true" />
+                ) : (
+                  <Sun className="size-4 shrink-0" aria-hidden="true" />
+                )}
+                <span>Theme</span>
+              </div>
+              <Switch
+                checked={isDark}
+                onCheckedChange={(checked) =>
+                  setTheme(checked ? "dark" : "light")
+                }
+                aria-label="Toggle dark mode"
+              />
             </div>
-            <Switch
-              checked={isDark}
-              onCheckedChange={(checked) =>
-                setTheme(checked ? "dark" : "light")
-              }
-              aria-label="Toggle dark mode"
-            />
+            {walletAddress ? (
+              <button
+                type="button"
+                className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left transition-colors hover:bg-sidebar-accent-foreground/8"
+                onClick={onDisconnect}
+              >
+                <LogOut className="size-4 shrink-0" aria-hidden="true" />
+                <span>Disconnect</span>
+              </button>
+            ) : null}
           </div>
-          {walletAddress ? (
-            <Button
-              variant="ghost"
-              size="xs"
-              className="mt-2 w-full justify-start"
-              onClick={onDisconnect}
-            >
-              <LogOut />
-              Disconnect
-            </Button>
-          ) : null}
         </div>
       </SidebarFooter>
       <SidebarRail />
