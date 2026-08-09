@@ -22,11 +22,14 @@ Cleanverse integration
 - CVA: The winning lender funds the seller in Cleanverse aUSDC, and the buyer repays the lender with the same asset.
 - Enforcement: Short-lived permits bind each eligibility check to the wallet, action, receivable, settlement asset, expiry time, and one-time nonce. The contracts reject expired or reused permits.
 
-Cleanverse references
+Cleanverse code permalinks
 
-- Cleanverse: https://www.cleanverse.com/
-- Developer documentation: https://docs.cleanverse.com/
-- Base Sepolia aUSDC: https://sepolia.basescan.org/token/0xaC0893567D43C3E7e6e35a72803df05416C1f20D
+- Server-only Cleanverse API client: https://github.com/Bidnox/monorepo/blob/296757c39a14ad095e091c89fa1bbe08aa05266a/apps/app/lib/server/cleanverse.ts#L93-L200
+- Eligibility checks and permit issuance: https://github.com/Bidnox/monorepo/blob/296757c39a14ad095e091c89fa1bbe08aa05266a/apps/app/app/api/compliance/permit/route.ts#L79-L168
+- Onchain permit enforcement: https://github.com/Bidnox/monorepo/blob/296757c39a14ad095e091c89fa1bbe08aa05266a/contracts/src/ComplianceGate.sol#L83-L184
+- Issuance and buyer confirmation: https://github.com/Bidnox/monorepo/blob/296757c39a14ad095e091c89fa1bbe08aa05266a/contracts/src/ReceivableRegistry.sol#L160-L226
+- Confidential bid eligibility: https://github.com/Bidnox/monorepo/blob/296757c39a14ad095e091c89fa1bbe08aa05266a/contracts/src/ConfidentialAuction.sol#L104-L136
+- aUSDC funding and repayment: https://github.com/Bidnox/monorepo/blob/296757c39a14ad095e091c89fa1bbe08aa05266a/contracts/src/ReceivableRegistry.sol#L265-L322
 
 Inco keeps each lender's offer encrypted during the auction. Only the winning lender and winning amount become public after finalization. Losing bid amounts remain sealed.
 
