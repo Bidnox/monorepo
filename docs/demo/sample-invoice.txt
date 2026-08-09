@@ -1,0 +1,38 @@
+                              INVOICE
+
+  BIDNOX DEMO SUPPLIES                         INV-BIDNOX-001
+  42 Protocol Avenue                          Issued: 09 Aug 2026
+  Singapore 018956                            Due:    31 Aug 2026, 17:00 UTC
+
+  Seller wallet
+  0xf653B0f43b0f920E590Bf3745997B332d916Aacb
+
+  BILL TO
+
+  Northstar Buyer Ltd.
+  88 Market Street
+  Singapore 048948
+
+  Buyer wallet
+  0x376b7271dD22D14D82Ef594324ea14e7670ed5b2
+
+  ------------------------------------------------------------------------
+  DESCRIPTION                         QTY       RATE              AMOUNT
+  ------------------------------------------------------------------------
+  Data verification services            1     1.00 aUSDC         1.00 aUSDC
+  ------------------------------------------------------------------------
+
+                                                    TOTAL         1.00 aUSDC
+
+  PAYMENT TERMS
+
+  Settlement network    Base Sepolia
+  Settlement asset      Cleanverse Access USDC (aUSDC)
+  Token contract        0xaC0893567D43C3E7e6e35a72803df05416C1f20D
+  Payment due           31 Aug 2026, 17:00 UTC
+
+  This document contains fictional information and is intended only for a
+  Bidnox product demonstration. No tax is due and no real-world payment is
+  requested outside the sandbox workflow.
+
+  Thank you.

@@ -108,7 +108,44 @@ export function CompanyIdentity({ name }: { name: string }) {
       <span className="grid size-6 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">
         <Building2 className="size-3.5" aria-hidden="true" />
       </span>
-      <span>{name}</span>
+      {/^0x[0-9a-fA-F]{40}$/.test(name) ? <ExplorerAddress value={name} /> : <span>{name}</span>}
+    </span>
+  )
+}
+
+export function ExplorerAddress({
+  value,
+  display = `${value.slice(0, 8)}…${value.slice(-6)}`,
+}: {
+  value: string
+  display?: string
+}) {
+  const [copied, setCopied] = React.useState(false)
+
+  async function copy(event: React.MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation()
+    await navigator.clipboard.writeText(value)
+    setCopied(true)
+    toastManager.add({ title: "Address copied", type: "success" })
+    window.setTimeout(() => setCopied(false), 1200)
+  }
+
+  return (
+    <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+      <a
+        href={`${BIDNOX_BASE_SEPOLIA.explorer}/address/${value}`}
+        target="_blank"
+        rel="noreferrer"
+        title={value}
+        onClick={(event) => event.stopPropagation()}
+        className="inline-flex min-w-0 items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground"
+      >
+        <span className="truncate">{display}</span>
+        <ExternalLink className="size-3 shrink-0" aria-hidden="true" />
+      </a>
+      <button type="button" onClick={copy} className="shrink-0 text-muted-foreground hover:text-foreground" aria-label="Copy address">
+        {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+      </button>
     </span>
   )
 }

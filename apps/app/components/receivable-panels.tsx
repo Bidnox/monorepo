@@ -8,6 +8,7 @@ import type { EvidenceEvent, Receivable } from "@/lib/bidnox"
 import {
   CompanyIdentity,
   CopyableAddress,
+  ExplorerAddress,
   LocalDateTime,
   Money,
   SettlementToken,
@@ -185,7 +186,7 @@ export function AuctionPanel({ receivable }: { receivable: Receivable }) {
               {
                 label: "Financier",
                 value: receivable.financier ? (
-                  <CopyableAddress value={receivable.financier} />
+                  <ExplorerAddress value={receivable.financier} />
                 ) : (
                   "—"
                 ),
@@ -315,7 +316,7 @@ export function CompliancePanel({ receivable }: { receivable: Receivable }) {
                 key={participant.wallet}
               >
                 <span className="font-medium">{participant.role}</span>
-                <span className="col-span-2 row-start-2 min-w-0 sm:col-span-1 sm:col-start-2 sm:row-start-1"><CopyableAddress value={participant.wallet} display={`${participant.wallet.slice(0, 8)}…${participant.wallet.slice(-6)}`} /></span>
+                <span className="col-span-2 row-start-2 min-w-0 sm:col-span-1 sm:col-start-2 sm:row-start-1"><ExplorerAddress value={participant.wallet} /></span>
                 <span className="col-start-2 row-start-1 justify-self-end text-muted-foreground sm:col-start-3">{participant.verified ? "Verified" : "Review"}</span>
               </div>
             ))}
@@ -439,11 +440,11 @@ export function SettlementPanel({ receivable }: { receivable: Receivable }) {
       {funded ? (
         <div className="mt-4">
           <p className="text-2xl font-medium"><Money value={receivable.advance ?? 0} /></p>
-          <p className="mt-1 text-xs text-muted-foreground">Financed in <SettlementToken className="font-medium text-foreground" /></p>
+          <p className="mt-1 text-xs text-muted-foreground">Financed in <a className="inline-flex font-medium text-foreground hover:underline" href={`${BIDNOX_BASE_SEPOLIA.explorer}/token/${BIDNOX_BASE_SEPOLIA.aUSDC}`} target="_blank" rel="noreferrer"><SettlementToken /></a></p>
           <dl className="mt-4 divide-y border-y text-xs">
             <div className="flex items-center justify-between gap-4 py-3">
               <dt className="text-muted-foreground">Seller received</dt>
-              <dd><CopyableAddress value={receivable.seller} display={`${receivable.seller.slice(0, 8)}…${receivable.seller.slice(-6)}`} /></dd>
+              <dd><ExplorerAddress value={receivable.seller} /></dd>
             </div>
             {receivable.fundingTransaction ? (
               <div className="flex items-center justify-between gap-4 py-3">
@@ -484,8 +485,8 @@ export function RepaymentPanel({ receivable }: { receivable: Receivable }) {
             label: "Due",
             value: <LocalDateTime timestamp={receivable.dueDateTimestamp} />,
           },
-          { label: "Paid by", value: receivable.buyer },
-          { label: "Paid to", value: "Winning financier" },
+          { label: "Paid by", value: <ExplorerAddress value={receivable.buyer} /> },
+          { label: "Paid to", value: receivable.financier ? <ExplorerAddress value={receivable.financier} /> : "Winning financier" },
         ]}
       />
       {receivable.repaymentTransaction ? (
