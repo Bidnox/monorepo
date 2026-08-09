@@ -8,7 +8,7 @@
 | Network | Base Sepolia, chain ID `84532` |
 | Live app | [app.bidnox.xyz](https://app.bidnox.xyz) |
 | Repository | [github.com/Bidnox/monorepo](https://github.com/Bidnox/monorepo) |
-| Demo video | **TODO: add the final video link** |
+| Demo video | [Watch the Bidnox demo](https://youtu.be/Lt_ngj1-b0w) |
 
 ## The problem
 

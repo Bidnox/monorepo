@@ -6,7 +6,7 @@ Please find our submission for the RWA track: **Bidnox, compliant confidential r
 
 - Public GitHub: https://github.com/Bidnox/monorepo
 - Live frontend: https://app.bidnox.xyz
-- Demo video: TODO: add the final video URL
+- Demo video: https://youtu.be/Lt_ngj1-b0w
 - One-page summary: https://github.com/Bidnox/monorepo/blob/main/docs/submission/one-page-summary.md
 - Deployed chain: Base Sepolia (`84532`)
 - ComplianceGate: `0x12badb8fd1828AB70Ea5FD4F5142Bc8c9e8f537d`

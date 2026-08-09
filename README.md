@@ -25,7 +25,7 @@ The idea is simple: a supplier should be able to find the best advance for a buy
 | Slide deck | [View the presentation](bidnox-slides.pdf) |
 | One-page summary | [Read the summary](docs/submission/one-page-summary.md) |
 | Demo evidence | [Review the transactions](docs/submission/demo-evidence.md) |
-| Demo video | **TODO: add the final video link** |
+| Demo video | [Watch the Bidnox demo](https://youtu.be/Lt_ngj1-b0w) |
 | Deployed chain | Base Sepolia, chain ID `84532` |
 
 ## How it works
