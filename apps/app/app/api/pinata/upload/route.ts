@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       documentHash: keccak256(stringToHex(reference)),
       fileName: file.name,
       size: result.data?.size ?? file.size,
-      network: "private",
+      network: "public",
     }, { headers: { "cache-control": "no-store" } })
   } catch (error) {
     if (error instanceof Error && error.message === "WALLET_SESSION_REQUIRED") {

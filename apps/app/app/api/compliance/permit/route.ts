@@ -173,7 +173,10 @@ export async function POST(request: Request) {
     if (error instanceof CleanverseApiError) {
       return Response.json({ error: error.message, code: error.code }, { status: error.status })
     }
-    console.error("Compliance permit request failed", error instanceof Error ? error.message : error)
+    console.error(
+      "Compliance permit request failed",
+      error instanceof Error ? error.name : "Unknown server error"
+    )
     return Response.json({ error: "Unable to issue a compliance permit." }, { status: 500 })
   }
 }

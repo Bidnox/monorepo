@@ -10,7 +10,7 @@ export default async function ActivityPage() {
     <div className="space-y-8">
       <PageHeader
         title="Activity"
-        description="Workflow, privacy, compliance, and payment events."
+        description="The latest workflow, privacy, and payment events from Base Sepolia."
       />
       <ActivityTable activity={activity} />
     </div>

@@ -173,6 +173,42 @@ type EvidenceLog = {
   args: Record<string, unknown>
 }
 
+const evidenceLabels: Record<
+  string,
+  { event: string; source: EvidenceEvent["source"] }
+> = {
+  ReceivableCreated: { event: "Receivable created", source: "Bidnox" },
+  BuyerConfirmed: { event: "Buyer confirmed", source: "Bidnox" },
+  AuctionOpened: { event: "Auction opened", source: "Bidnox" },
+  AuctionClosed: { event: "Winning bid recorded", source: "Inco" },
+  ReceivableFunded: {
+    event: "Seller funded in aUSDC",
+    source: "Blockchain",
+  },
+  ReceivableRepaid: {
+    event: "Buyer repaid in aUSDC",
+    source: "Blockchain",
+  },
+  ReceivableOverdue: {
+    event: "Receivable marked overdue",
+    source: "Bidnox",
+  },
+  ReceivableCancelled: {
+    event: "Receivable cancelled",
+    source: "Bidnox",
+  },
+  BidSubmitted: { event: "Encrypted bid submitted", source: "Inco" },
+  AuctionRevealRequested: {
+    event: "Winner reveal requested",
+    source: "Inco",
+  },
+  AuctionFinalized: { event: "Winner finalized", source: "Inco" },
+}
+
+let activityCache:
+  | { expiresAt: number; rows: ActivityRow[] }
+  | undefined
+
 async function getEventSetLogsInChunks<
   const TEvents extends readonly AbiEvent[],
 >(
@@ -253,29 +289,10 @@ async function eventEvidence(
         ).then((logs) => logs.filter((log) => log.args.auctionId === auctionId))
       : [],
   ])
-  const labels: Record<
-    string,
-    { event: string; source: EvidenceEvent["source"] }
-  > = {
-    ReceivableCreated: { event: "Receivable created", source: "Bidnox" },
-    BuyerConfirmed: { event: "Buyer confirmed", source: "Bidnox" },
-    AuctionOpened: { event: "Auction opened", source: "Bidnox" },
-    AuctionClosed: { event: "Winning bid recorded", source: "Inco" },
-    ReceivableFunded: { event: "Seller funded in aUSDC", source: "Blockchain" },
-    ReceivableRepaid: { event: "Buyer repaid in aUSDC", source: "Blockchain" },
-    ReceivableOverdue: { event: "Receivable marked overdue", source: "Bidnox" },
-    ReceivableCancelled: { event: "Receivable cancelled", source: "Bidnox" },
-    BidSubmitted: { event: "Encrypted bid submitted", source: "Inco" },
-    AuctionRevealRequested: {
-      event: "Winner reveal requested",
-      source: "Inco",
-    },
-    AuctionFinalized: { event: "Winner finalized", source: "Inco" },
-  }
   const evidence = [...registryLogs, ...auctionLogs]
     .sort((a, b) => Number(a.blockNumber - b.blockNumber))
     .map((log) => {
-      const label = labels[log.eventName]
+      const label = evidenceLabels[log.eventName]
       return {
         ...label,
         time: `Block ${log.blockNumber}`,
@@ -337,7 +354,7 @@ export async function getReceivableById(
         console.error(
           "Receivable evidence enrichment failed",
           id,
-          error instanceof Error ? error.message.split("\n")[0] : error
+          error instanceof Error ? error.name : "Unknown server error"
         )
         return [undefined, 0n, emptyDetails] as const
       }
@@ -393,33 +410,113 @@ export async function getReceivableById(
 
 export async function getReceivables(): Promise<Receivable[]> {
   const publicClient = client()
-  const latestBlock = await publicClient.getBlockNumber()
-  const logs = await getLogsInChunks(
-    publicClient,
-    { address: BIDNOX_BASE_SEPOLIA.receivableRegistry, event: createdEvent },
-    BIDNOX_BASE_SEPOLIA.deploymentBlock,
-    latestBlock
-  )
-  return (
-    await Promise.all(
-      logs.map((log) => getReceivableById(log.args.receivableId!, false))
+  try {
+    const latestBlock = await publicClient.getBlockNumber()
+    const logs = await getLogsInChunks(
+      publicClient,
+      { address: BIDNOX_BASE_SEPOLIA.receivableRegistry, event: createdEvent },
+      BIDNOX_BASE_SEPOLIA.deploymentBlock,
+      latestBlock
     )
-  )
-    .filter((item): item is Receivable => Boolean(item))
-    .sort((left, right) => right.issueDateTimestamp - left.issueDateTimestamp)
+    return (
+      await Promise.all(
+        logs.map((log) => getReceivableById(log.args.receivableId!, false))
+      )
+    )
+      .filter((item): item is Receivable => Boolean(item))
+      .sort((left, right) => right.issueDateTimestamp - left.issueDateTimestamp)
+  } catch (error) {
+    console.error(
+      "Receivables unavailable",
+      error instanceof Error ? error.name : "Unknown server error"
+    )
+    return []
+  }
 }
 
 export async function getActivity(): Promise<ActivityRow[]> {
-  const summaries = await getReceivables()
-  const receivables = (
-    await Promise.all(summaries.map((item) => getReceivableById(item.id)))
-  ).filter((item): item is Receivable => Boolean(item))
-  return receivables
-    .flatMap((receivable) =>
-      receivable.evidenceEvents.map((event) => ({
-        ...event,
-        receivable: receivable.reference,
-      }))
+  // Activity is a demo-facing recent feed, not a historical indexer. Keep the
+  // window within Base's public 2,000-block eth_getLogs limit and issue only
+  // one registry query plus one auction query per page load.
+  const activityWindow = 1_900n
+  const activityLimit = 30
+  const cached = activityCache
+  if (cached && cached.expiresAt > Date.now()) return cached.rows
+
+  const publicClient = client()
+
+  try {
+    const latestBlock = await publicClient.getBlockNumber()
+    const recentStart =
+      latestBlock >= activityWindow
+        ? latestBlock - activityWindow + 1n
+        : BIDNOX_BASE_SEPOLIA.deploymentBlock
+    const fromBlock =
+      recentStart > BIDNOX_BASE_SEPOLIA.deploymentBlock
+        ? recentStart
+        : BIDNOX_BASE_SEPOLIA.deploymentBlock
+
+    const registryLogs = await getEventSetLogsInChunks(
+      publicClient,
+      BIDNOX_BASE_SEPOLIA.receivableRegistry,
+      registryEvents,
+      fromBlock,
+      latestBlock
     )
-    .reverse()
+    const auctionLogs = await getEventSetLogsInChunks(
+      publicClient,
+      BIDNOX_BASE_SEPOLIA.confidentialAuction,
+      auctionEvents,
+      fromBlock,
+      latestBlock
+    )
+
+    const auctionReceivables = new Map<bigint, string>()
+    for (const log of registryLogs) {
+      const auctionId = log.args.auctionId
+      const receivableId = log.args.receivableId
+      if (typeof auctionId === "bigint" && typeof receivableId === "string") {
+        auctionReceivables.set(auctionId, receivableId)
+      }
+    }
+
+    const activity = [...registryLogs, ...auctionLogs]
+      .sort((left, right) => Number(right.blockNumber - left.blockNumber))
+      .flatMap((log): ActivityRow[] => {
+        const label = evidenceLabels[log.eventName]
+        if (!label) return []
+
+        const directId = log.args.receivableId
+        const auctionId = log.args.auctionId
+        const receivableId =
+          typeof directId === "string"
+            ? directId
+            : typeof auctionId === "bigint"
+              ? auctionReceivables.get(auctionId)
+              : undefined
+        const reference = receivableId
+          ? `RCV-${receivableId.slice(2, 10).toUpperCase()}`
+          : typeof auctionId === "bigint"
+            ? `Auction #${auctionId}`
+            : "—"
+
+        return [
+          {
+            ...label,
+            receivable: reference,
+            time: `Block ${log.blockNumber}`,
+            transaction: log.transactionHash,
+          },
+        ]
+      })
+      .slice(0, activityLimit)
+    activityCache = { expiresAt: Date.now() + 15_000, rows: activity }
+    return activity
+  } catch (error) {
+    console.error(
+      "Recent activity unavailable",
+      error instanceof Error ? error.name : "Unknown server error"
+    )
+    return cached?.rows ?? []
+  }
 }

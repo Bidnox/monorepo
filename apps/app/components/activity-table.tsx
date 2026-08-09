@@ -44,21 +44,32 @@ export function ActivityTable({ activity }: { activity: ActivityRow[] }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row, index) => (
-                  <TableRow key={`${row.transaction}-${row.event}-${index}`}>
-                    <TableCell className="font-medium">{row.event}</TableCell>
-                    <TableCell>{row.receivable}</TableCell>
-                    <TableCell>
-                      <SourceBadge source={row.source} />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {row.time}
-                    </TableCell>
-                    <TableCell>
-                      <TransactionLink hash={row.transaction} />
+                {rows.length ? (
+                  rows.map((row, index) => (
+                    <TableRow key={`${row.transaction}-${row.event}-${index}`}>
+                      <TableCell className="font-medium">{row.event}</TableCell>
+                      <TableCell>{row.receivable}</TableCell>
+                      <TableCell>
+                        <SourceBadge source={row.source} />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {row.time}
+                      </TableCell>
+                      <TableCell>
+                        <TransactionLink hash={row.transaction} />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      No recent activity is available. Reload in a moment.
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </TabsPanel>
