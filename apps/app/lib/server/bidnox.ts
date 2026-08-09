@@ -6,13 +6,14 @@ import {
   http,
   parseAbiItem,
   type AbiEvent,
+  type Address,
   type GetLogsParameters,
   type GetLogsReturnType,
   type Hex,
 } from "viem"
 import { baseSepolia } from "viem/chains"
 
-import type { ActivityRow, EvidenceEvent, Receivable, ReceivableStatus } from "@/lib/bidnox"
+import type { ActivityRow, EvidenceEvent, Receivable, ReceivableStatus, SealedBid } from "@/lib/bidnox"
 import { BIDNOX_BASE_SEPOLIA } from "@/lib/contracts"
 
 const registryReadAbi = [{
@@ -97,32 +98,53 @@ async function getLogsInChunks<const TEvent extends AbiEvent>(
   return logs
 }
 
+type EvidenceLog = {
+  eventName: string
+  blockNumber: bigint
+  transactionHash: Hex
+  args: Record<string, unknown>
+}
+
+async function getEventSetLogsInChunks<const TEvents extends readonly AbiEvent[]>(
+  publicClient: ReturnType<typeof client>,
+  address: Address,
+  events: TEvents,
+  fromBlock: bigint,
+  toBlock: bigint
+) {
+  const logs: EvidenceLog[] = []
+  for (let start = fromBlock; start <= toBlock; start += MAX_LOG_BLOCKS) {
+    const end = start + MAX_LOG_BLOCKS - 1n < toBlock ? start + MAX_LOG_BLOCKS - 1n : toBlock
+    const chunk = await publicClient.getLogs({ address, events, fromBlock: start, toBlock: end })
+    logs.push(...chunk as unknown as EvidenceLog[])
+  }
+  return logs
+}
+
 const statusNames: Record<number, ReceivableStatus> = {
   1: "Awaiting buyer", 2: "Buyer confirmed", 3: "Auction open", 4: "Auction closed",
   5: "Funded", 6: "Repaid", 7: "Overdue", 8: "Cancelled",
 }
 const date = (value: bigint, short = false) => new Intl.DateTimeFormat("en-GB", short
   ? { month: "short", day: "2-digit" }
-  : { day: "2-digit", month: "short", year: "numeric" }
+  : { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" }
 ).format(new Date(Number(value) * 1000))
 const shortAddress = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`
 
-async function eventEvidence(receivableId: Hex, auctionId: bigint): Promise<EvidenceEvent[]> {
+async function eventEvidence(receivableId: Hex, auctionId: bigint): Promise<{ evidence: EvidenceEvent[]; sealedBids: SealedBid[] }> {
   const publicClient = client()
   const latestBlock = await publicClient.getBlockNumber()
   const [registryLogs, auctionLogs] = await Promise.all([
-    Promise.all(registryEvents.map((event) => getLogsInChunks(
-      publicClient,
-      { address: BIDNOX_BASE_SEPOLIA.receivableRegistry, event, args: { receivableId } },
+    getEventSetLogsInChunks(
+      publicClient, BIDNOX_BASE_SEPOLIA.receivableRegistry, registryEvents,
       BIDNOX_BASE_SEPOLIA.deploymentBlock,
       latestBlock
-    ))).then((groups) => groups.flat()),
-    auctionId > 0n ? Promise.all(auctionEvents.map((event) => getLogsInChunks(
-      publicClient,
-      { address: BIDNOX_BASE_SEPOLIA.confidentialAuction, event, args: { auctionId } },
+    ).then((logs) => logs.filter((log) => log.args.receivableId === receivableId)),
+    auctionId > 0n ? getEventSetLogsInChunks(
+      publicClient, BIDNOX_BASE_SEPOLIA.confidentialAuction, auctionEvents,
       BIDNOX_BASE_SEPOLIA.deploymentBlock,
       latestBlock
-    ))).then((groups) => groups.flat()) : [],
+    ).then((logs) => logs.filter((log) => log.args.auctionId === auctionId)) : [],
   ])
   const labels: Record<string, { event: string; source: EvidenceEvent["source"] }> = {
     ReceivableCreated: { event: "Receivable created", source: "Bidnox" },
@@ -137,27 +159,42 @@ async function eventEvidence(receivableId: Hex, auctionId: bigint): Promise<Evid
     AuctionRevealRequested: { event: "Winner reveal requested", source: "Inco" },
     AuctionFinalized: { event: "Winner finalized", source: "Inco" },
   }
-  return [...registryLogs, ...auctionLogs]
+  const evidence = [...registryLogs, ...auctionLogs]
     .sort((a, b) => Number(a.blockNumber - b.blockNumber))
     .map((log) => {
       const label = labels[log.eventName]
       return { ...label, time: `Block ${log.blockNumber}`, transaction: log.transactionHash }
     })
+  const sealedBids = auctionLogs.flatMap((log) => {
+    if (log.eventName !== "BidSubmitted") return []
+    const bidder = log.args.bidder
+    return typeof bidder === "string" ? [{ bidder, transaction: log.transactionHash }] : []
+  })
+  return { evidence, sealedBids }
 }
 
-export async function getReceivableById(id: string): Promise<Receivable | undefined> {
+export async function getReceivableById(id: string, includeEvidence = true): Promise<Receivable | undefined> {
   if (!/^0x[0-9a-fA-F]{64}$/.test(id)) return undefined
   const publicClient = client()
   try {
     const value = await publicClient.readContract({ address: BIDNOX_BASE_SEPOLIA.receivableRegistry, abi: registryReadAbi, functionName: "getReceivable", args: [id as Hex] })
     if (Number(value.status) === 0) return undefined
-    const [auction, bidders, evidence] = value.auctionId > 0n
-      ? await Promise.all([
-          publicClient.readContract({ address: BIDNOX_BASE_SEPOLIA.confidentialAuction, abi: auctionReadAbi, functionName: "getAuction", args: [value.auctionId] }),
-          publicClient.readContract({ address: BIDNOX_BASE_SEPOLIA.confidentialAuction, abi: auctionReadAbi, functionName: "bidderCount", args: [value.auctionId] }),
-          eventEvidence(id as Hex, value.auctionId),
-        ])
-      : [undefined, 0n, await eventEvidence(id as Hex, 0n)] as const
+    const emptyDetails: { evidence: EvidenceEvent[]; sealedBids: SealedBid[] } = { evidence: [], sealedBids: [] }
+    const [auction, bidders, details] = await (async () => {
+      try {
+        return includeEvidence && value.auctionId > 0n
+          ? await Promise.all([
+              publicClient.readContract({ address: BIDNOX_BASE_SEPOLIA.confidentialAuction, abi: auctionReadAbi, functionName: "getAuction", args: [value.auctionId] }),
+              publicClient.readContract({ address: BIDNOX_BASE_SEPOLIA.confidentialAuction, abi: auctionReadAbi, functionName: "bidderCount", args: [value.auctionId] }),
+              eventEvidence(id as Hex, value.auctionId),
+            ])
+          : [undefined, 0n, includeEvidence ? await eventEvidence(id as Hex, 0n) : emptyDetails] as const
+      } catch (error) {
+        console.error("Receivable evidence enrichment failed", id, error instanceof Error ? error.message.split("\n")[0] : error)
+        return [undefined, 0n, emptyDetails] as const
+      }
+    })()
+    const { evidence, sealedBids } = details
     const funding = evidence.find((item) => item.event === "Seller funded in aUSDC")
     const repayment = evidence.find((item) => item.event === "Buyer repaid in aUSDC")
     return {
@@ -167,14 +204,23 @@ export async function getReceivableById(id: string): Promise<Receivable | undefi
       buyer: value.buyer,
       faceValue: Number(formatUnits(value.faceValue, 6)),
       advance: value.advanceAmount ? Number(formatUnits(value.advanceAmount, 6)) : undefined,
-      issueDate: date(value.issueDate), dueDate: date(value.dueDate), dueShort: date(value.dueDate, true),
+      issueDate: date(value.issueDate), issueDateTimestamp: Number(value.issueDate),
+      dueDate: date(value.dueDate), dueDateTimestamp: Number(value.dueDate), dueShort: date(value.dueDate, true),
       status: statusNames[Number(value.status)],
-      documentName: `Hash ${shortAddress(value.documentHash)}`,
-      documentSize: "Stored offchain",
+      documentName: `Commitment ${shortAddress(value.documentHash)}`,
+      documentSize: "Private file stored offchain; hash anchored onchain",
+      documentHash: value.documentHash,
       fingerprint: value.fingerprint,
       bidders: Number(bidders), auctionId: Number(value.auctionId),
       auctionOpensAt: auction ? date(auction.opensAt) : undefined,
+      auctionOpensAtTimestamp: auction ? Number(auction.opensAt) : undefined,
       auctionClosesAt: auction ? date(auction.closesAt) : undefined,
+      auctionClosesAtTimestamp: auction ? Number(auction.closesAt) : undefined,
+      auctionRevealRequested: auction?.revealRequested,
+      auctionFinalized: auction?.finalized,
+      revealedWinner: auction?.finalized ? auction.revealedWinner : undefined,
+      revealedHighestBid: auction?.finalized ? Number(formatUnits(auction.revealedHighestBid, 6)) : undefined,
+      sealedBids,
       financier: value.financier,
       evidenceEvents: evidence,
       fundingTransaction: funding?.transaction,
@@ -192,10 +238,11 @@ export async function getReceivables(): Promise<Receivable[]> {
     BIDNOX_BASE_SEPOLIA.deploymentBlock,
     latestBlock
   )
-  return (await Promise.all(logs.map((log) => getReceivableById(log.args.receivableId!)))).filter((item): item is Receivable => Boolean(item))
+  return (await Promise.all(logs.map((log) => getReceivableById(log.args.receivableId!, false)))).filter((item): item is Receivable => Boolean(item))
 }
 
 export async function getActivity(): Promise<ActivityRow[]> {
-  const receivables = await getReceivables()
+  const summaries = await getReceivables()
+  const receivables = (await Promise.all(summaries.map((item) => getReceivableById(item.id)))).filter((item): item is Receivable => Boolean(item))
   return receivables.flatMap((receivable) => receivable.evidenceEvents.map((event) => ({ ...event, receivable: receivable.reference }))).reverse()
 }

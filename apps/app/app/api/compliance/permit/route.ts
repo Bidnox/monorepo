@@ -8,7 +8,6 @@ import {
   isAddress,
   isHex,
   pad,
-  recoverMessageAddress,
   toHex,
   type Address,
   type Hex,
@@ -21,7 +20,6 @@ import {
   auctionAbi,
   complianceActions,
   gateDomain,
-  permitRequestMessage,
   permitTypes,
   registryAbi,
   type CompliancePermit,
@@ -29,6 +27,7 @@ import {
   type ReceivableInput,
 } from "@/lib/protocol"
 import { CleanverseApiError, verifyAPass } from "@/lib/server/cleanverse"
+import { requireWalletSession } from "@/lib/server/wallet-session"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -38,12 +37,8 @@ type PermitRequest = {
   action?: PermitAction
   subjectId?: string
   auctionId?: string
-  issuedAt?: number
-  authorization?: string
   input?: Record<string, string>
 }
-
-const MAX_REQUEST_AGE_MS = 5 * 60 * 1000
 
 function publicClient() {
   return createPublicClient({
@@ -98,27 +93,13 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as PermitRequest
     if (!body.caller || !isAddress(body.caller) || !body.action || !(body.action in complianceActions) ||
-      !body.subjectId || !/^0x[0-9a-fA-F]{64}$/.test(body.subjectId) ||
-      !body.authorization || !isHex(body.authorization) || !Number.isSafeInteger(body.issuedAt)) {
+      !body.subjectId || !/^0x[0-9a-fA-F]{64}$/.test(body.subjectId)) {
       return Response.json({ error: "Invalid permit request." }, { status: 400 })
     }
 
-    const caller = getAddress(body.caller)
+    const caller = await requireWalletSession(body.caller)
     const action = body.action
     const subjectId = body.subjectId as Hex
-    const issuedAt = body.issuedAt!
-    const age = Date.now() - issuedAt
-    if (age < -30_000 || age > MAX_REQUEST_AGE_MS) {
-      return Response.json({ error: "Wallet authorization has expired." }, { status: 401 })
-    }
-
-    const recovered = await recoverMessageAddress({
-      message: permitRequestMessage(caller, action, subjectId, issuedAt),
-      signature: body.authorization as Hex,
-    })
-    if (recovered !== caller) {
-      return Response.json({ error: "Wallet authorization does not match the caller." }, { status: 401 })
-    }
 
     const client = publicClient()
     const targets: Address[] = []
@@ -186,6 +167,9 @@ export async function POST(request: Request) {
 
     return Response.json({ subjectId, permits }, { headers: { "cache-control": "no-store" } })
   } catch (error) {
+    if (error instanceof Error && error.message === "WALLET_SESSION_REQUIRED") {
+      return Response.json({ error: "Sign in with the connected wallet first." }, { status: 401 })
+    }
     if (error instanceof CleanverseApiError) {
       return Response.json({ error: error.message, code: error.code }, { status: error.status })
     }

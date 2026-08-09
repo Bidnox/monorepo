@@ -1,12 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { Check, FileText, LockKeyhole, ShieldCheck } from "lucide-react"
+import { ExternalLink, FileText, LockKeyhole, ShieldCheck } from "lucide-react"
+import { useAccount } from "wagmi"
 
 import type { EvidenceEvent, Receivable } from "@/lib/bidnox"
 import {
   CompanyIdentity,
   CopyableAddress,
+  LocalDateTime,
   Money,
   SettlementToken,
   SourceBadge,
@@ -22,6 +24,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Separator } from "@/components/ui/separator"
+import { BIDNOX_BASE_SEPOLIA } from "@/lib/contracts"
 
 function DetailRows({
   rows,
@@ -82,7 +85,7 @@ export function ReceivableSummary({ receivable }: { receivable: Receivable }) {
             label: "Face value",
             value: <Money value={receivable.faceValue} />,
           },
-          { label: "Due date", value: receivable.dueDate },
+          { label: "Due date", value: <LocalDateTime timestamp={receivable.dueDateTimestamp} /> },
           { label: "Settlement", value: <SettlementToken /> },
         ]}
       />
@@ -121,12 +124,10 @@ export function AuctionPanel({ receivable }: { receivable: Receivable }) {
 
       {isActive ? (
         <div className="border-y py-5">
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2">
             <div>
               <p className="text-xs text-muted-foreground">Auction closes</p>
-              <p className="mt-1 text-xl font-medium tabular-nums">
-                {receivable.auctionClosesAt ?? "—"}
-              </p>
+              <LocalDateTime className="mt-1 block text-xl font-medium" timestamp={receivable.auctionClosesAtTimestamp} />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Private bids</p>
@@ -139,6 +140,16 @@ export function AuctionPanel({ receivable }: { receivable: Receivable }) {
             Bids are sealed until the auction closes. No rank or leading offer
             is disclosed.
           </p>
+          {receivable.sealedBids.length ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {receivable.sealedBids.map((bid, index) => (
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs" key={bid.transaction}>
+                  Encrypted bid {index + 1}
+                  <TransactionLink hash={bid.transaction} />
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -196,26 +207,21 @@ export function EvidenceTimeline({
           </p>
         </div>
       ) : null}
-      <ol className="relative ms-2 border-s">
+      <ol className="divide-y rounded-lg border">
         {events.map((event) => (
           <li
             key={`${event.event}-${event.time}`}
-            className="relative ms-6 pb-7 last:pb-0"
+            className="flex items-center justify-between gap-3 px-3 py-2.5"
           >
-            <span className="absolute top-1.5 -left-[1.69rem] size-2 rounded-full bg-foreground ring-4 ring-background" />
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
+            <div className="min-w-0">
                 <p className="text-sm font-medium">{event.event}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {event.time}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
+                <p className="mt-1 text-xs text-muted-foreground">{event.time}</p>
+            </div>
+            <div className="shrink-0">
                 <SourceBadge source={event.source} />
                 {event.transaction ? (
                   <TransactionLink hash={event.transaction} />
                 ) : null}
-              </div>
             </div>
           </li>
         ))}
@@ -225,52 +231,60 @@ export function EvidenceTimeline({
 }
 
 export function CompliancePanel({ receivable }: { receivable: Receivable }) {
-  const [eligible, setEligible] = React.useState<boolean>()
+  const [status, setStatus] = React.useState<{
+    eligible: boolean
+    checkedAt: string
+    participants: Array<{ role: string; wallet: string; verified: boolean }>
+  }>()
+  const [unavailable, setUnavailable] = React.useState(false)
 
   React.useEffect(() => {
     fetch(`/api/cleanverse/status?receivableId=${receivable.id}`, {
       cache: "no-store",
     })
       .then((response) => (response.ok ? response.json() : Promise.reject()))
-      .then((result) => setEligible(result.eligible === true))
-      .catch(() => setEligible(false))
+      .then((result) => { setStatus(result); setUnavailable(false) })
+      .catch(() => setUnavailable(true))
   }, [receivable.id])
 
   return (
-    <Card
-      className="rounded-xl shadow-none"
-      data-receivable-status={receivable.status}
-    >
-      <CardHeader className="p-5 pb-2">
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-sm">Verification</CardTitle>
-          <Badge variant={eligible === undefined ? "secondary" : eligible ? "success" : "warning"}>
-            {eligible === undefined ? "Checking" : eligible ? "Eligible" : "Review required"}
-          </Badge>
+    <Card className="rounded-xl shadow-none" data-receivable-status={receivable.status}>
+      <CardPanel className="p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm"><ShieldCheck className="size-4 text-emerald-600" /><span className="font-medium">Cleanverse</span><span className="text-muted-foreground">A-Pass + aUSDC settlement</span></div>
+          <div className="flex items-center gap-2">
+            <Badge variant={!status && !unavailable ? "secondary" : status?.eligible ? "success" : "warning"}>{!status && !unavailable ? "Checking" : status?.eligible ? "Eligible" : "Review"}</Badge>
+            <a className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground" href={`${BIDNOX_BASE_SEPOLIA.explorer}/token/${BIDNOX_BASE_SEPOLIA.aUSDC}`} target="_blank" rel="noreferrer"><SettlementToken /><ExternalLink className="size-3" /></a>
+          </div>
         </div>
-      </CardHeader>
-      <CardPanel className="px-5 pb-5">
-        <p className="text-sm text-muted-foreground">
-          {eligible === undefined
-            ? "Checking current Cleanverse A-Pass and asset eligibility."
-            : eligible
-              ? "Seller and buyer currently pass the Cleanverse sandbox check."
-              : "One or more participant checks are unavailable or not eligible."}
-        </p>
-        <div className="mt-4 flex items-center gap-2 text-sm">
-          <Check className="size-4 text-success" aria-hidden="true" />
-          Settlement in <SettlementToken />
-        </div>
+        <details className="group mt-3 border-t pt-3 text-xs">
+          <summary className="cursor-pointer text-muted-foreground">Participant verification details</summary>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {status?.participants.map((participant) => <div className="flex items-center justify-between gap-2 rounded-md bg-muted/50 p-2" key={participant.wallet}><div className="min-w-0"><p className="font-medium">{participant.role}</p><p className="truncate font-mono text-muted-foreground">{participant.wallet}</p></div><Badge variant={participant.verified ? "success" : "warning"}>{participant.verified ? "Verified" : "Review"}</Badge></div>)}
+            {!status ? <p className="text-muted-foreground">{unavailable ? "Status unavailable." : "Checking participants…"}</p> : null}
+          </div>
+        </details>
       </CardPanel>
     </Card>
   )
 }
 
 export function DocumentPanel({ receivable }: { receivable: Receivable }) {
+  const { address } = useAccount()
+  const [ipfs, setIpfs] = React.useState<{ cid: string; reference: string }>()
+
+  React.useEffect(() => {
+    if (!address) return
+    fetch(`/api/pinata/document?receivableId=${receivable.id}&caller=${address}`, { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then(setIpfs)
+      .catch(() => setIpfs(undefined))
+  }, [address, receivable.id])
+
   return (
     <Card className="rounded-xl shadow-none">
       <CardHeader className="p-5 pb-3">
-        <CardTitle className="text-sm">Invoice document</CardTitle>
+        <CardTitle className="text-sm">Private invoice commitment</CardTitle>
       </CardHeader>
       <CardPanel className="px-5 pb-5">
         <div className="flex items-center gap-3">
@@ -287,13 +301,14 @@ export function DocumentPanel({ receivable }: { receivable: Receivable }) {
           </div>
         </div>
         <Separator className="my-4" />
-        <p className="text-xs text-muted-foreground">Fingerprint</p>
+        <p className="text-xs text-muted-foreground">Onchain document fingerprint</p>
         <div className="mt-1">
           <CopyableAddress
             value={receivable.fingerprint}
             display={`${receivable.fingerprint.slice(0, 10)}…${receivable.fingerprint.slice(-8)}`}
           />
         </div>
+        {ipfs ? <div className="mt-4"><p className="text-xs text-muted-foreground">Private IPFS reference</p><a className="mt-1 inline-flex max-w-full items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground" href={ipfs.reference} rel="noreferrer"><span className="truncate">{ipfs.reference}</span><ExternalLink className="size-3 shrink-0" /></a></div> : null}
       </CardPanel>
     </Card>
   )
@@ -313,8 +328,8 @@ export function AuctionDetails({ receivable }: { receivable: Receivable }) {
       <h2 className="mb-2 text-sm font-medium">Auction</h2>
       <DetailRows
         rows={[
-          { label: "Started", value: receivable.auctionOpensAt ?? "—" },
-          { label: "Closes", value: receivable.auctionClosesAt ?? "—" },
+          { label: "Started", value: <LocalDateTime timestamp={receivable.auctionOpensAtTimestamp} /> },
+          { label: "Closes", value: <LocalDateTime timestamp={receivable.auctionClosesAtTimestamp} /> },
           { label: "Bidders", value: receivable.bidders },
           { label: "Privacy", value: "Sealed bids" },
         ]}
@@ -335,7 +350,7 @@ export function SettlementPanel({ receivable }: { receivable: Receivable }) {
         <h2 className="text-sm font-medium">
           {funded ? "Funding complete" : "Ready to fund"}
         </h2>
-          <Badge variant="outline">Onchain settlement</Badge>
+          <Badge variant="outline">Cleanverse CVA · aUSDC</Badge>
       </div>
       {funded ? (
         <div>
@@ -372,7 +387,7 @@ export function RepaymentPanel({ receivable }: { receivable: Receivable }) {
         <Badge
           variant={receivable.status === "Repaid" ? "success" : "secondary"}
         >
-          {receivable.status === "Repaid" ? "Repaid" : "Awaiting repayment"}
+          {receivable.status === "Repaid" ? "Repaid in aUSDC" : "Awaiting aUSDC repayment"}
         </Badge>
       </div>
       <p className="text-2xl font-medium">
@@ -380,7 +395,7 @@ export function RepaymentPanel({ receivable }: { receivable: Receivable }) {
       </p>
       <DetailRows
         rows={[
-          { label: "Due", value: receivable.dueDate },
+          { label: "Due", value: <LocalDateTime timestamp={receivable.dueDateTimestamp} /> },
           { label: "Paid by", value: receivable.buyer },
           { label: "Paid to", value: "Winning financier" },
         ]}

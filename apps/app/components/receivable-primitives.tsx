@@ -5,12 +5,12 @@ import Image from "next/image"
 import {
   Blocks,
   Building2,
+  CircleDot,
   Check,
   Copy,
   ExternalLink,
   LockKeyhole,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react"
 
 import type { ReceivableStatus as ReceivableStatusValue } from "@/lib/bidnox"
@@ -115,7 +115,7 @@ export function CompanyIdentity({ name }: { name: string }) {
 }
 
 const SOURCE_ICONS = {
-  Bidnox: Sparkles,
+  Bidnox: CircleDot,
   Inco: LockKeyhole,
   Cleanverse: ShieldCheck,
   Blockchain: Blocks,
@@ -132,7 +132,8 @@ export function SourceBadge({ source }: { source: keyof typeof SOURCE_ICONS }) {
   )
 }
 
-export function CleanverseStatus({ verified = true }: { verified?: boolean }) {
+export function CleanverseStatus({ verified }: { verified?: boolean }) {
+  if (verified === undefined) return <Badge variant="secondary">A-Pass check</Badge>
   return (
     <Badge variant={verified ? "success" : "warning"}>
       {verified ? "Verified" : "Verification required"}
@@ -156,7 +157,8 @@ export function ReceivableStatus({
 }: {
   status: ReceivableStatusValue
 }) {
-  return <Badge variant={STATUS_VARIANTS[status]}>{status}</Badge>
+  const label = status === "Auction closed" ? "Winner selected · awaiting funding" : status
+  return <Badge variant={STATUS_VARIANTS[status]}>{label}</Badge>
 }
 
 export function TransactionLink({ hash }: { hash: string }) {
@@ -172,5 +174,31 @@ export function TransactionLink({ hash }: { hash: string }) {
       {hash.length > 18 ? `${hash.slice(0, 10)}…${hash.slice(-8)}` : hash}
       <ExternalLink className="size-3" aria-hidden="true" />
     </a>
+  )
+}
+
+const subscribeToHydration = () => () => undefined
+
+export function LocalDateTime({
+  timestamp,
+  className,
+}: {
+  timestamp?: number
+  className?: string
+}) {
+  const hydrated = React.useSyncExternalStore(subscribeToHydration, () => true, () => false)
+  const value = timestamp && hydrated ? new Intl.DateTimeFormat(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZoneName: "short",
+    }).format(new Date(timestamp * 1000)) : undefined
+
+  return (
+    <time className={cn("tabular-nums", className)} dateTime={timestamp ? new Date(timestamp * 1000).toISOString() : undefined}>
+      {value ?? (timestamp ? "Local time" : "—")}
+    </time>
   )
 }

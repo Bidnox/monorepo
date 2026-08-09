@@ -1,6 +1,6 @@
 import {
   CleanverseApiError,
-  getCleanverseWalletStatus,
+  verifyAPass,
 } from "@/lib/server/cleanverse"
 import { getReceivableById } from "@/lib/server/bidnox"
 
@@ -20,9 +20,18 @@ export async function GET(request: Request) {
     if (!receivable) {
       return Response.json({ error: "Receivable not found." }, { status: 404 })
     }
-    const participants = await Promise.all(
-      [receivable.seller, receivable.buyer].map(getCleanverseWalletStatus)
+    const candidates = [
+      { role: "Seller", wallet: receivable.seller },
+      { role: "Buyer", wallet: receivable.buyer },
+      ...receivable.sealedBids.map((bid, index) => ({ role: `Lender ${index + 1}`, wallet: bid.bidder })),
+      ...(receivable.financier ? [{ role: "Winning financier", wallet: receivable.financier }] : []),
+    ]
+    const unique = candidates.filter((candidate, index) =>
+      candidates.findIndex((item) => item.wallet.toLowerCase() === candidate.wallet.toLowerCase()) === index
     )
+    const participants = await Promise.all(unique.map(async ({ role, wallet }) => ({
+      role, wallet, verification: await verifyAPass(wallet),
+    })))
     return Response.json({
       receivableId,
       eligible: participants.every(
@@ -31,6 +40,11 @@ export async function GET(request: Request) {
           verification.data &&
           verification.data.code === 4
       ),
+      participants: participants.map(({ role, wallet, verification }) => ({
+        role,
+        wallet,
+        verified: verification.code === "0000" && Boolean(verification.data && verification.data.code === 4),
+      })),
       checkedAt: new Date().toISOString(),
     }, {
       headers: { "cache-control": "no-store" },

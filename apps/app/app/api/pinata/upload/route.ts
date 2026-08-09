@@ -1,21 +1,17 @@
 import {
   getAddress,
   isAddress,
-  isHex,
   keccak256,
-  recoverMessageAddress,
   stringToHex,
-  type Hex,
 } from "viem"
 
-import { invoiceUploadRequestMessage } from "@/lib/protocol"
 import { CleanverseApiError, verifyAPass } from "@/lib/server/cleanverse"
+import { requireWalletSession } from "@/lib/server/wallet-session"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
-const MAX_REQUEST_AGE_MS = 5 * 60 * 1000
 const ALLOWED_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
@@ -32,31 +28,16 @@ export async function POST(request: Request) {
     const input = await request.formData()
     const file = input.get("file")
     const callerValue = input.get("caller")
-    const issuedAtValue = input.get("issuedAt")
-    const authorization = input.get("authorization")
 
     if (!(file instanceof File) || typeof callerValue !== "string" ||
-      !isAddress(callerValue) || typeof issuedAtValue !== "string" ||
-      typeof authorization !== "string" || !isHex(authorization)) {
+      !isAddress(callerValue)) {
       return Response.json({ error: "Invalid invoice upload request." }, { status: 400 })
     }
     if (file.size === 0 || file.size > MAX_UPLOAD_BYTES || !ALLOWED_TYPES.has(file.type)) {
       return Response.json({ error: "Upload a PDF, JPEG, PNG, or WebP file no larger than 10 MB." }, { status: 400 })
     }
 
-    const caller = getAddress(callerValue)
-    const issuedAt = Number(issuedAtValue)
-    const age = Date.now() - issuedAt
-    if (!Number.isSafeInteger(issuedAt) || age < -30_000 || age > MAX_REQUEST_AGE_MS) {
-      return Response.json({ error: "Wallet upload authorization has expired." }, { status: 401 })
-    }
-    const recovered = await recoverMessageAddress({
-      message: invoiceUploadRequestMessage(caller, issuedAt),
-      signature: authorization as Hex,
-    })
-    if (recovered !== caller) {
-      return Response.json({ error: "Wallet upload authorization does not match the caller." }, { status: 401 })
-    }
+    const caller = await requireWalletSession(getAddress(callerValue))
 
     const verification = await verifyAPass(caller)
     if (verification.code !== "0000" || !verification.data || verification.data.code !== 4) {
@@ -96,6 +77,9 @@ export async function POST(request: Request) {
       network: "private",
     }, { headers: { "cache-control": "no-store" } })
   } catch (error) {
+    if (error instanceof Error && error.message === "WALLET_SESSION_REQUIRED") {
+      return Response.json({ error: "Sign in with the connected wallet first." }, { status: 401 })
+    }
     if (error instanceof CleanverseApiError) {
       return Response.json({ error: error.message, code: error.code }, { status: error.status })
     }

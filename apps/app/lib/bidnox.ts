@@ -15,6 +15,11 @@ export type EvidenceEvent = {
   transaction: string
 }
 
+export type SealedBid = {
+  bidder: string
+  transaction: string
+}
+
 export type Receivable = {
   id: string
   reference: string
@@ -23,16 +28,26 @@ export type Receivable = {
   faceValue: number
   advance?: number
   issueDate: string
+  issueDateTimestamp: number
   dueDate: string
+  dueDateTimestamp: number
   dueShort: string
   status: ReceivableStatus
   documentName: string
   documentSize: string
+  documentHash: string
   fingerprint: string
   bidders: number
   auctionId?: number
   auctionOpensAt?: string
+  auctionOpensAtTimestamp?: number
   auctionClosesAt?: string
+  auctionClosesAtTimestamp?: number
+  auctionRevealRequested?: boolean
+  auctionFinalized?: boolean
+  revealedWinner?: string
+  revealedHighestBid?: number
+  sealedBids: SealedBid[]
   financier?: string
   evidenceEvents: EvidenceEvent[]
   fundingTransaction?: string

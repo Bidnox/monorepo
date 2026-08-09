@@ -1,8 +1,11 @@
 "use client"
 
 import * as React from "react"
+import type { HexString } from "@inco/lightning-js"
 import { useRouter } from "next/navigation"
+import { CalendarDays, FileText, Upload, X } from "lucide-react"
 import {
+  bytesToHex,
   getAddress,
   keccak256,
   pad,
@@ -20,20 +23,19 @@ import {
 } from "wagmi"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Calendar } from "@/components/ui/calendar"
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverPopup, PopoverTrigger } from "@/components/ui/popover"
 import { toastManager } from "@/components/ui/toast"
 import type { Receivable } from "@/lib/bidnox"
 import { BIDNOX_BASE_SEPOLIA } from "@/lib/contracts"
 import {
   auctionAbi,
   buyerConfirmationTypes,
-  DEMO_DOCUMENT_HASH,
   deserializePermit,
   erc20Abi,
   incoExecutorAbi,
-  invoiceUploadRequestMessage,
-  permitRequestMessage,
   registryAbi,
   registryDomain,
   type PermitAction,
@@ -41,9 +43,6 @@ import {
 } from "@/lib/protocol"
 
 type IssuedPermit = { permit: Record<string, string>; signature: Hex }
-
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true"
-const DEMO_BUYER = "0x376b7271dD22D14D82Ef594324ea14e7670ed5b2"
 
 function errorMessage(error: unknown) {
   if (error instanceof Error) return error.message.split("\n")[0]
@@ -63,14 +62,34 @@ function useTransactions() {
   const { signTypedDataAsync } = useSignTypedData()
   const { writeContractAsync } = useWriteContract()
 
+  async function ensureWalletSession() {
+    if (!address) throw new Error("Connect a wallet first.")
+    const current = await fetch(`/api/auth/verify?address=${address}`, { cache: "no-store" })
+    if (current.ok) return
+    const challengeResponse = await fetch("/api/auth/challenge", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ address }),
+    })
+    const challenge = await challengeResponse.json() as { message?: string; error?: string }
+    if (!challengeResponse.ok || !challenge.message) throw new Error(challenge.error || "Unable to start wallet sign-in.")
+    const signature = await signMessageAsync({ message: challenge.message })
+    const verification = await fetch("/api/auth/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ address, signature }),
+    })
+    const result = await verification.json() as { error?: string }
+    if (!verification.ok) throw new Error(result.error || "Wallet sign-in failed.")
+  }
+
   async function issuePermits(action: PermitAction, subjectId: Hex, extra: Record<string, unknown> = {}) {
     if (!address) throw new Error("Connect a wallet first.")
-    const issuedAt = Date.now()
-    const authorization = await signMessageAsync({ message: permitRequestMessage(address, action, subjectId, issuedAt) })
+    await ensureWalletSession()
     const response = await fetch("/api/compliance/permit", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ caller: address, action, subjectId, issuedAt, authorization, ...extra }),
+      body: JSON.stringify({ caller: address, action, subjectId, ...extra }),
     })
     const result = await response.json() as { error?: string; permits?: IssuedPermit[] }
     if (!response.ok || !result.permits) throw new Error(result.error || "Compliance permit request failed.")
@@ -82,7 +101,7 @@ function useTransactions() {
     const hash = await writeContractAsync(
       parameters as Parameters<typeof writeContractAsync>[0]
     )
-    const receipt = await client.waitForTransactionReceipt({ hash })
+    const receipt = await client.waitForTransactionReceipt({ hash, confirmations: 2 })
     if (receipt.status !== "success") throw new Error("Transaction reverted.")
     return hash
   }
@@ -90,6 +109,7 @@ function useTransactions() {
   return {
     address,
     client,
+    ensureWalletSession,
     issuePermits,
     send,
     signMessageAsync,
@@ -111,10 +131,60 @@ function ActionStatus({ message, hash }: { message?: string; hash?: Hex }) {
 
 export function CreateReceivableForm() {
   const router = useRouter()
-  const { address, client, issuePermits, send, signMessageAsync } = useTransactions()
-  const [open, setOpen] = React.useState(DEMO_MODE)
+  const { address, client, ensureWalletSession, issuePermits, send } = useTransactions()
   const [busy, setBusy] = React.useState(false)
   const [message, setMessage] = React.useState<string>()
+  const [sessionReady, setSessionReady] = React.useState<boolean>()
+  const [file, setFile] = React.useState<File>()
+  const [dragging, setDragging] = React.useState(false)
+  const [dateOpen, setDateOpen] = React.useState(false)
+  const [dueDay, setDueDay] = React.useState<Date>()
+  const [dueTime, setDueTime] = React.useState("17:00")
+  const fileInput = React.useRef<HTMLInputElement>(null)
+
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const defaultDate = new Date()
+      defaultDate.setDate(defaultDate.getDate() + 30)
+      setDueDay(defaultDate)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  React.useEffect(() => {
+    if (!address) return
+    fetch(`/api/auth/verify?address=${address}`, { cache: "no-store" })
+      .then((response) => setSessionReady(response.ok))
+      .catch(() => setSessionReady(false))
+  }, [address])
+
+  async function authenticate() {
+    try {
+      setBusy(true)
+      setMessage("Confirm the one-time, gasless wallet sign-in…")
+      await ensureWalletSession()
+      setSessionReady(true)
+      setMessage("Wallet secured. Complete the form and create the receivable.")
+    } catch (error) {
+      setMessage(errorMessage(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const dueDateValue = React.useMemo(() => {
+    if (!dueDay || !dueTime) return ""
+    const year = dueDay.getFullYear()
+    const month = String(dueDay.getMonth() + 1).padStart(2, "0")
+    const day = String(dueDay.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}T${dueTime}`
+  }, [dueDay, dueTime])
+
+  function chooseFile(next?: File) {
+    if (!next) return
+    setFile(next)
+    setMessage(undefined)
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -123,42 +193,27 @@ export function CreateReceivableForm() {
     try {
       setBusy(true)
       setMessage("Preparing receivable and checking Cleanverse eligibility…")
-      const buyer = getAddress(DEMO_MODE ? DEMO_BUYER : String(data.get("buyer")))
+      const buyer = getAddress(String(data.get("buyer")))
       const latest = await client.getBlock()
-      const dueDate = DEMO_MODE
-        ? latest.timestamp + 30n * 24n * 60n * 60n
-        : BigInt(Math.floor(new Date(String(data.get("dueDate"))).getTime() / 1000))
-      const reference = DEMO_MODE ? `BIDNOX-DEMO-${Date.now()}` : String(data.get("reference"))
-      const faceValue = DEMO_MODE ? "2" : String(data.get("faceValue"))
-      let documentHash = DEMO_DOCUMENT_HASH
-      if (!DEMO_MODE) {
-        const file = data.get("document")
-        if (!(file instanceof File) || file.size === 0) {
-          throw new Error("Choose an invoice document to upload.")
-        }
-        setMessage("Authorize the private Pinata invoice upload…")
-        const issuedAt = Date.now()
-        const authorization = await signMessageAsync({
-          message: invoiceUploadRequestMessage(address, issuedAt),
-        })
-        const upload = new FormData()
-        upload.set("file", file)
-        upload.set("caller", address)
-        upload.set("issuedAt", issuedAt.toString())
-        upload.set("authorization", authorization)
-        const response = await fetch("/api/pinata/upload", {
-          method: "POST",
-          body: upload,
-        })
-        const result = await response.json() as {
-          documentHash?: Hex
-          error?: string
-        }
-        if (!response.ok || !result.documentHash) {
-          throw new Error(result.error || "Invoice upload failed.")
-        }
-        documentHash = result.documentHash
+      const dueDateMs = new Date(String(data.get("dueDate"))).getTime()
+      if (!Number.isFinite(dueDateMs)) throw new Error("Choose a valid due date and time.")
+      const dueDate = BigInt(Math.floor(dueDateMs / 1000))
+      if (dueDate <= latest.timestamp) throw new Error("Due date and time must be in the future.")
+      const reference = String(data.get("reference"))
+      const faceValue = String(data.get("faceValue"))
+      if (!file || file.size === 0) {
+        throw new Error("Choose an invoice document to upload.")
       }
+      setMessage("Signing in once for private upload and compliance checks…")
+      await ensureWalletSession()
+      setMessage("Uploading the private invoice to Pinata…")
+      const upload = new FormData()
+      upload.set("file", file)
+      upload.set("caller", address)
+      const response = await fetch("/api/pinata/upload", { method: "POST", body: upload })
+      const result = await response.json() as { documentHash?: Hex; error?: string }
+      if (!response.ok || !result.documentHash) throw new Error(result.error || "Invoice upload failed.")
+      const documentHash = result.documentHash
       const input: ReceivableInput = {
         buyer,
         invoiceReferenceHash: keccak256(stringToHex(reference)),
@@ -185,39 +240,142 @@ export function CreateReceivableForm() {
   }
 
   return (
-    <section className="rounded-xl border p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-4">
-        <div><div className="flex items-center gap-2"><h2 className="text-sm font-medium">Start the demo</h2>{DEMO_MODE ? <Badge variant="success">Live testnet</Badge> : null}</div><p className="mt-1 text-xs text-muted-foreground">Create a real Base Sepolia receivable settled in aUSDC.</p></div>
-        {!DEMO_MODE ? <Button onClick={() => setOpen((value) => !value)} variant={open ? "secondary" : "default"}>{open ? "Close" : "Create receivable"}</Button> : null}
+    <form className="space-y-6" onSubmit={submit}>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Field>
+          <FieldLabel>Invoice reference</FieldLabel>
+          <Input size="lg" name="reference" required placeholder="INV-2026-001" />
+        </Field>
+        <Field>
+          <FieldLabel>Buyer wallet</FieldLabel>
+          <Input size="lg" name="buyer" required placeholder="0x…" spellCheck={false} />
+        </Field>
+        <Field>
+          <FieldLabel>Face value</FieldLabel>
+          <Input size="lg" name="faceValue" required min="0.000001" step="0.000001" type="number" placeholder="1.00" />
+          <FieldDescription>Settled in Cleanverse aUSDC.</FieldDescription>
+        </Field>
+        <Field>
+          <FieldLabel>Due date and time</FieldLabel>
+          <input name="dueDate" type="hidden" value={dueDateValue} />
+          <div className="grid w-full grid-cols-[minmax(0,1fr)_8.5rem] gap-2">
+            <Popover open={dateOpen} onOpenChange={setDateOpen}>
+              <PopoverTrigger render={<Button className="h-9.5 w-full justify-start font-normal sm:h-8.5" size="lg" variant="outline" />}>
+                <CalendarDays />
+                {dueDay ? dueDay.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }) : "Select date"}
+              </PopoverTrigger>
+              <PopoverPopup align="start">
+                <Calendar
+                  disabled={{ before: new Date() }}
+                  mode="single"
+                  onSelect={(value) => { setDueDay(value); setDateOpen(false) }}
+                  selected={dueDay}
+                />
+              </PopoverPopup>
+            </Popover>
+            <Input aria-label="Due time" size="lg" type="time" required value={dueTime} onChange={(event) => setDueTime(event.target.value)} />
+          </div>
+          <FieldDescription>Shown in each viewer’s local timezone.</FieldDescription>
+        </Field>
       </div>
-      {open ? (
-        <form className={DEMO_MODE ? "mt-4" : "mt-5 grid gap-4 sm:grid-cols-2"} onSubmit={submit}>
-          {DEMO_MODE ? <div className="flex flex-col gap-4 rounded-lg bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium">2 aUSDC invoice · due in 30 days</p><p className="mt-1 text-xs text-muted-foreground">Demo data is ready. Your wallet still signs a real transaction.</p></div><Button className="shrink-0" loading={busy} type="submit">Create demo invoice</Button></div> : <>
-            <label className="text-xs text-muted-foreground">Buyer wallet<Input className="mt-1" name="buyer" required placeholder="0x…" /></label>
-            <label className="text-xs text-muted-foreground">Invoice reference<Input className="mt-1" name="reference" required placeholder="INV-2026-001" /></label>
-            <label className="text-xs text-muted-foreground">Private invoice file<Input accept="application/pdf,image/jpeg,image/png,image/webp" className="mt-1" name="document" required type="file" /></label>
-            <label className="text-xs text-muted-foreground">Face value (aUSDC)<Input className="mt-1" name="faceValue" required min="0.000001" step="0.000001" type="number" /></label>
-            <label className="text-xs text-muted-foreground">Due date<Input className="mt-1" name="dueDate" required type="date" /></label>
-            <div className="flex items-end"><Button className="w-full" loading={busy} type="submit">Check A-Pass & create</Button></div>
-          </>}
-          <div className="sm:col-span-2"><ActionStatus message={message} /></div>
-        </form>
-      ) : null}
-    </section>
+
+      <Field>
+        <FieldLabel>Invoice document</FieldLabel>
+        <input
+          ref={fileInput}
+          className="sr-only"
+          type="file"
+          accept="application/pdf,image/jpeg,image/png,image/webp"
+          onChange={(event) => chooseFile(event.target.files?.[0])}
+        />
+        <button
+          type="button"
+          onClick={() => fileInput.current?.click()}
+          onDragEnter={(event) => { event.preventDefault(); setDragging(true) }}
+          onDragOver={(event) => event.preventDefault()}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(event) => {
+            event.preventDefault()
+            setDragging(false)
+            chooseFile(event.dataTransfer.files?.[0])
+          }}
+          className={`flex min-h-32 w-full items-center justify-center rounded-xl border border-dashed px-5 text-center transition-colors ${dragging ? "border-foreground bg-muted" : "border-input hover:bg-muted/50"}`}
+        >
+          {file ? (
+            <span className="flex items-center gap-3 text-left">
+              <span className="grid size-9 place-items-center rounded-lg bg-muted"><FileText className="size-4" /></span>
+              <span><span className="block max-w-72 truncate text-sm font-medium">{file.name}</span><span className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB · Private Pinata storage</span></span>
+            </span>
+          ) : (
+            <span><Upload className="mx-auto mb-2 size-5 text-muted-foreground" /><span className="block text-sm font-medium">Drop invoice here or browse</span><span className="mt-1 block text-xs text-muted-foreground">PDF, JPEG, PNG or WebP · up to 10 MB</span></span>
+          )}
+        </button>
+        {file ? <Button size="xs" variant="ghost" onClick={() => { setFile(undefined); if (fileInput.current) fileInput.current.value = "" }}><X />Remove file</Button> : null}
+      </Field>
+
+      <div className="flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <ActionStatus message={message} />
+        {sessionReady ? (
+          <Button className="sm:min-w-44" loading={busy} type="submit">Create receivable</Button>
+        ) : (
+          <Button className="sm:min-w-44" disabled={sessionReady === undefined} loading={busy} type="button" onClick={authenticate}>Secure wallet session</Button>
+        )}
+      </div>
+    </form>
   )
 }
 
 export function ReceivableActions({ receivable }: { receivable: Receivable }) {
   const router = useRouter()
-  const { address, client, issuePermits, send, signTypedDataAsync } = useTransactions()
+  const { address, client, ensureWalletSession, issuePermits, send, signTypedDataAsync } = useTransactions()
   const [busy, setBusy] = React.useState<string>()
   const [message, setMessage] = React.useState<string>()
   const [hash, setHash] = React.useState<Hex>()
+  const [now, setNow] = React.useState(() => Math.floor(Date.now() / 1000))
+  const [approvalReady, setApprovalReady] = React.useState<boolean>()
+  const [sessionReady, setSessionReady] = React.useState<boolean>()
+  const [buyerSignature, setBuyerSignature] = React.useState<Hex>()
 
   const caller = address?.toLowerCase()
   const isSeller = caller === receivable.seller.toLowerCase()
   const isBuyer = caller === receivable.buyer.toLowerCase()
   const isFinancier = Boolean(receivable.financier && caller === receivable.financier.toLowerCase())
+  const alreadyBid = receivable.sealedBids.some((item) => item.bidder.toLowerCase() === caller)
+  const auctionAcceptingBids = receivable.status === "Auction open" &&
+    !receivable.auctionRevealRequested &&
+    Boolean(receivable.auctionClosesAtTimestamp && receivable.auctionClosesAtTimestamp > now)
+
+  React.useEffect(() => {
+    if (receivable.status !== "Auction open") return
+    const timer = window.setInterval(() => {
+      setNow(Math.floor(Date.now() / 1000))
+      router.refresh()
+    }, 4_000)
+    return () => window.clearInterval(timer)
+  }, [receivable.status, router])
+
+  React.useEffect(() => {
+    if (!client || !address || !["Auction closed", "Funded"].includes(receivable.status)) return
+    let active = true
+    Promise.all([
+      readOnchain(),
+      client.readContract({ address: BIDNOX_BASE_SEPOLIA.aUSDC, abi: erc20Abi, functionName: "allowance", args: [address, BIDNOX_BASE_SEPOLIA.receivableRegistry] }),
+    ]).then(([value, allowance]) => {
+      if (!active) return
+      const required = receivable.status === "Auction closed" ? value.advanceAmount : value.faceValue
+      setApprovalReady(allowance >= required)
+    }).catch(() => { if (active) setApprovalReady(undefined) })
+    return () => { active = false }
+  // readOnchain is intentionally scoped to the current wallet and receivable state.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address, client, receivable.id, receivable.status])
+
+  React.useEffect(() => {
+    if (!address) return
+    fetch(`/api/auth/verify?address=${address}`, { cache: "no-store" })
+      .then((response) => setSessionReady(response.ok))
+      .catch(() => setSessionReady(false))
+  }, [address])
 
   async function run(label: string, action: () => Promise<Hex>) {
     try {
@@ -237,12 +395,37 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
     return client.readContract({ address: BIDNOX_BASE_SEPOLIA.receivableRegistry, abi: registryAbi, functionName: "getReceivable", args: [receivable.id as Hex] })
   }
 
+  async function waitForAllowance(owner: `0x${string}`, amount: bigint) {
+    if (!client) throw new Error("Base Sepolia client is unavailable.")
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const allowance = await client.readContract({ address: BIDNOX_BASE_SEPOLIA.aUSDC, abi: erc20Abi, functionName: "allowance", args: [owner, BIDNOX_BASE_SEPOLIA.receivableRegistry] })
+      if (allowance >= amount) return
+      await new Promise((resolve) => window.setTimeout(resolve, 1_000))
+    }
+    throw new Error("The aUSDC approval is confirmed but not yet visible. Please retry in a few seconds.")
+  }
+
+  async function signBuyerConfirmation() {
+    try {
+      setBusy("Buyer signature")
+      setMessage("Review and sign the receivable details. This costs no gas.")
+      const value = await readOnchain()
+      const signature = await signTypedDataAsync({
+        domain: registryDomain, types: buyerConfirmationTypes, primaryType: "BuyerConfirmation",
+        message: { receivableId: receivable.id as Hex, seller: value.seller, buyer: value.buyer, faceValue: value.faceValue, dueDate: value.dueDate, fingerprint: value.fingerprint },
+      })
+      setBuyerSignature(signature)
+      setMessage("Buyer signature ready. Record it on Base Sepolia.")
+    } catch (error) {
+      setMessage(errorMessage(error))
+    } finally {
+      setBusy(undefined)
+    }
+  }
+
   const confirm = () => run("Buyer confirmation", async () => {
-    const value = await readOnchain()
-    const buyerSignature = await signTypedDataAsync({
-      domain: registryDomain, types: buyerConfirmationTypes, primaryType: "BuyerConfirmation",
-      message: { receivableId: receivable.id as Hex, seller: value.seller, buyer: value.buyer, faceValue: value.faceValue, dueDate: value.dueDate, fingerprint: value.fingerprint },
-    })
+    if (!buyerSignature) throw new Error("Sign the buyer confirmation first.")
+    setMessage("Cleanverse CVI verified the buyer. Issuing an action-bound confirmation permit…")
     const [issued] = await issuePermits("confirm", receivable.id as Hex)
     return send({ address: BIDNOX_BASE_SEPOLIA.receivableRegistry, abi: registryAbi, functionName: "confirmReceivable", args: [receivable.id as Hex, buyerSignature, issued.permit, issued.signature] })
   })
@@ -252,9 +435,10 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
     const form = new FormData(event.currentTarget)
     await run("Auction opening", async () => {
       if (!client) throw new Error("Base Sepolia client is unavailable.")
-      const block = await client.getBlock()
+      const [block, value] = await Promise.all([client.getBlock(), readOnchain()])
       const closesAt = block.timestamp + BigInt(Math.floor(Number(form.get("duration")) * 3600))
-      return send({ address: BIDNOX_BASE_SEPOLIA.confidentialAuction, abi: auctionAbi, functionName: "createAuction", args: [receivable.id as Hex, closesAt, parseUnits(String(form.get("reserve")), 6)] })
+      const reserveAmount = value.faceValue * 75n / 100n
+      return send({ address: BIDNOX_BASE_SEPOLIA.confidentialAuction, abi: auctionAbi, functionName: "createAuction", args: [receivable.id as Hex, closesAt, reserveAmount] })
     })
   }
 
@@ -265,6 +449,7 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
       if (!address || !client || !receivable.auctionId) throw new Error("Connect a wallet to an open auction.")
       const auctionId = BigInt(receivable.auctionId)
       const subjectId = pad(toHex(auctionId), { size: 32 })
+      setMessage("Checking the lender’s Cleanverse A-Pass and issuing a bid-bound permit…")
       const [issued] = await issuePermits("bid", subjectId, { auctionId: auctionId.toString() })
       setMessage("Encrypting the bid for the Inco executor…")
       const [{ Lightning }, { handleTypes }] = await Promise.all([import("@inco/lightning-js/lite"), import("@inco/lightning-js")])
@@ -276,57 +461,157 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
     })
   }
 
+  async function revealWinner() {
+    try {
+      if (!client || !receivable.auctionId) throw new Error("Auction details are unavailable.")
+      setBusy("Winner reveal"); setHash(undefined)
+      const auctionId = BigInt(receivable.auctionId)
+      const auction = await client.readContract({ address: BIDNOX_BASE_SEPOLIA.confidentialAuction, abi: auctionAbi, functionName: "getAuction", args: [auctionId] })
+      if (!auction.revealRequested && !auction.finalized) {
+        setMessage("Closing bidding on Base Sepolia…")
+        const closeHash = await send({ address: BIDNOX_BASE_SEPOLIA.confidentialAuction, abi: auctionAbi, functionName: "closeAuction", args: [auctionId] })
+        setHash(closeHash)
+        setMessage("Bidding closed. Return when the Inco attestation is ready to finalize the winner.")
+        toastManager.add({ title: "Auction closed", type: "success" })
+        router.refresh()
+        return
+      }
+      if (auction.finalized) {
+        setMessage("Auction closed without an eligible winning bid.")
+        router.refresh()
+        return
+      }
+      setMessage("Collecting Inco TEE attestations for the winning amount and bidder…")
+      const { Lightning } = await import("@inco/lightning-js/lite")
+      const zap = await Lightning.baseSepoliaTestnet()
+      if (getAddress(zap.executorAddress) !== getAddress(BIDNOX_BASE_SEPOLIA.incoExecutor)) throw new Error("Inco executor configuration mismatch.")
+      const handles = [auction.highestBid, auction.winningBidderIndex] as HexString[]
+      let revealed: Awaited<ReturnType<typeof zap.attestedReveal>> | undefined
+      let lastError: unknown
+      for (let attempt = 1; attempt <= 12 && !revealed; attempt += 1) {
+        try {
+          setMessage(`Waiting for Inco winner attestation · attempt ${attempt}/12…`)
+          revealed = await zap.attestedReveal(handles, { backoffConfig: { maxRetries: 8, baseDelayInMs: 500, backoffFactor: 1.35 } })
+        } catch (error) {
+          lastError = error
+          if (attempt < 12) await new Promise((resolve) => window.setTimeout(resolve, 3_000))
+        }
+      }
+      if (!revealed) throw lastError instanceof Error ? lastError : new Error("Inco attestations are not ready.")
+      const formatted = revealed.map((result) => ({
+        value: result.plaintext.value as bigint,
+        attestation: { handle: result.handle as Hex, value: pad(toHex(result.plaintext.value as bigint), { size: 32 }) },
+        signatures: result.covalidatorSignatures.map((signature) => bytesToHex(signature)),
+      }))
+      setMessage("Submitting the attested winner on Base Sepolia…")
+      const finalHash = await send({
+        address: BIDNOX_BASE_SEPOLIA.confidentialAuction, abi: auctionAbi, functionName: "finalizeAuction",
+        args: [auctionId, formatted[0].value, formatted[1].value, formatted[0].attestation, formatted[0].signatures, formatted[1].attestation, formatted[1].signatures],
+      })
+      setHash(finalHash); setMessage("Winner finalized. Losing bid amounts remain sealed.")
+      toastManager.add({ title: "Winner finalized", type: "success" })
+      router.refresh()
+    } catch (error) {
+      setMessage(errorMessage(error))
+      toastManager.add({ title: "Winner reveal failed", description: errorMessage(error), type: "error" })
+    } finally { setBusy(undefined) }
+  }
+
   const fund = () => run("Funding", async () => {
     const value = await readOnchain()
     if (!client || !address) throw new Error("Connect the winning financier wallet.")
     const allowance = await client.readContract({ address: BIDNOX_BASE_SEPOLIA.aUSDC, abi: erc20Abi, functionName: "allowance", args: [address, BIDNOX_BASE_SEPOLIA.receivableRegistry] })
-    if (allowance < value.advanceAmount) {
-      setMessage("Approve the aUSDC funding transfer in your wallet…")
-      await send({ address: BIDNOX_BASE_SEPOLIA.aUSDC, abi: erc20Abi, functionName: "approve", args: [BIDNOX_BASE_SEPOLIA.receivableRegistry, value.advanceAmount] })
-    }
+    if (allowance < value.advanceAmount) throw new Error("Approve aUSDC first, then fund in a separate transaction.")
+    setMessage("Cleanverse CVI verified the financier and seller. Issuing settlement permits…")
     const [financier, seller] = await issuePermits("fund", receivable.id as Hex)
     return send({ address: BIDNOX_BASE_SEPOLIA.receivableRegistry, abi: registryAbi, functionName: "fundReceivable", args: [receivable.id as Hex, financier.permit, financier.signature, seller.permit, seller.signature] })
+  })
+
+  const approveFunding = () => run("aUSDC approval", async () => {
+    const value = await readOnchain()
+    const transaction = await send({ address: BIDNOX_BASE_SEPOLIA.aUSDC, abi: erc20Abi, functionName: "approve", args: [BIDNOX_BASE_SEPOLIA.receivableRegistry, value.advanceAmount] })
+    if (address) await waitForAllowance(address, value.advanceAmount)
+    setApprovalReady(true)
+    return transaction
   })
 
   const repay = () => run("Repayment", async () => {
     const value = await readOnchain()
     if (!client || !address) throw new Error("Connect the buyer wallet.")
     const allowance = await client.readContract({ address: BIDNOX_BASE_SEPOLIA.aUSDC, abi: erc20Abi, functionName: "allowance", args: [address, BIDNOX_BASE_SEPOLIA.receivableRegistry] })
-    if (allowance < value.faceValue) {
-      setMessage("Approve the aUSDC repayment in your wallet…")
-      await send({ address: BIDNOX_BASE_SEPOLIA.aUSDC, abi: erc20Abi, functionName: "approve", args: [BIDNOX_BASE_SEPOLIA.receivableRegistry, value.faceValue] })
-    }
+    if (allowance < value.faceValue) throw new Error("Approve aUSDC first, then repay in a separate transaction.")
+    setMessage("Cleanverse CVI verified the buyer and financier. Issuing repayment permits…")
     const [buyer, financier] = await issuePermits("repay", receivable.id as Hex)
     return send({ address: BIDNOX_BASE_SEPOLIA.receivableRegistry, abi: registryAbi, functionName: "repayReceivable", args: [receivable.id as Hex, buyer.permit, buyer.signature, financier.permit, financier.signature] })
   })
 
+  const approveRepayment = () => run("aUSDC approval", async () => {
+    const value = await readOnchain()
+    const transaction = await send({ address: BIDNOX_BASE_SEPOLIA.aUSDC, abi: erc20Abi, functionName: "approve", args: [BIDNOX_BASE_SEPOLIA.receivableRegistry, value.faceValue] })
+    if (address) await waitForAllowance(address, value.faceValue)
+    setApprovalReady(true)
+    return transaction
+  })
+
   const hasAction = (receivable.status === "Awaiting buyer" && isBuyer) ||
-    (receivable.status === "Buyer confirmed" && isSeller) || receivable.status === "Auction open" ||
+    (receivable.status === "Buyer confirmed" && isSeller) || (auctionAcceptingBids && !alreadyBid) ||
+    (receivable.status === "Auction open" && !auctionAcceptingBids) ||
     (receivable.status === "Auction closed" && isFinancier) || (receivable.status === "Funded" && isBuyer)
 
+  async function authenticateWallet() {
+    try {
+      setBusy("Wallet sign-in")
+      setMessage("Confirm the one-time, gasless wallet sign-in…")
+      await ensureWalletSession()
+      setSessionReady(true)
+      setMessage("Wallet secured. Transaction buttons now open one wallet prompt each.")
+    } catch (error) {
+      setMessage(errorMessage(error))
+    } finally {
+      setBusy(undefined)
+    }
+  }
+
   if (!address) return <section className="rounded-xl border p-4 text-sm text-muted-foreground">Connect the relevant participant wallet to transact.</section>
-  if (!hasAction) return null
+  if (sessionReady !== true && hasAction) return (
+    <section className="rounded-xl border p-4">
+      <h2 className="text-sm font-medium">Secure wallet session</h2>
+      <p className="mt-1 text-xs text-muted-foreground">Sign once without gas. Bidnox then reuses the session for action-bound Cleanverse checks, so transaction buttons open only one wallet prompt.</p>
+      <Button className="mt-4" disabled={sessionReady === undefined} loading={busy === "Wallet sign-in"} onClick={authenticateWallet}>{sessionReady === undefined ? "Checking session…" : "Continue securely"}</Button>
+      <ActionStatus message={message} />
+    </section>
+  )
+  if (auctionAcceptingBids && alreadyBid) return <section className="rounded-xl border p-4 text-sm text-muted-foreground">Your encrypted bid is sealed onchain. Bidding remains open for other eligible lenders.</section>
+  if (!hasAction) {
+    const waiting = receivable.status === "Awaiting buyer" ? "Waiting for the recorded buyer to confirm the receivable." :
+      receivable.status === "Buyer confirmed" ? "Waiting for the seller to open the financing auction." :
+      receivable.status === "Auction closed" ? "Winner selected. Waiting for the winning financier to fund the seller." :
+      receivable.status === "Funded" ? "Seller funded. Waiting for the buyer to repay in aUSDC." :
+      "No transaction is required from this wallet."
+    return <section className="rounded-xl border p-4 text-sm text-muted-foreground">{waiting}</section>
+  }
 
   return (
     <section className="rounded-xl border p-4">
-      <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-medium">Your next step</h2>{DEMO_MODE ? <Badge variant="success">Real transaction</Badge> : null}</div>
-      <p className="mt-1 text-xs text-muted-foreground">Cleanverse verifies the wallet, then your wallet submits the action on Base Sepolia.</p>
+      <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-medium">Next action</h2></div>
+      <p className="mt-1 text-xs text-muted-foreground">Cleanverse verifies each required participant, then your wallet submits the action on Base Sepolia.</p>
       <div className="mt-4 space-y-4">
-        {receivable.status === "Awaiting buyer" && isBuyer ? <Button loading={busy === "Buyer confirmation"} onClick={confirm}>Confirm receivable</Button> : null}
+        {receivable.status === "Awaiting buyer" && isBuyer ? buyerSignature ? <Button loading={busy === "Buyer confirmation"} onClick={confirm}>Record confirmation</Button> : <Button loading={busy === "Buyer signature"} onClick={signBuyerConfirmation}>Sign confirmation</Button> : null}
         {receivable.status === "Buyer confirmed" && isSeller ? (
-          <form className={DEMO_MODE ? "flex items-center justify-between gap-4 rounded-lg bg-muted/50 p-3" : "grid gap-3 sm:grid-cols-3"} onSubmit={openAuction}>
-            {DEMO_MODE ? <><input name="reserve" type="hidden" value={(receivable.faceValue * 0.75).toFixed(6)} /><input name="duration" type="hidden" value="0.05" /><p className="text-sm">Open a 3-minute private auction</p></> : <><label className="text-xs text-muted-foreground">Reserve (aUSDC)<Input className="mt-1" name="reserve" required step="0.000001" type="number" /></label><label className="text-xs text-muted-foreground">Duration (hours)<Input className="mt-1" defaultValue="24" min="0.05" name="duration" required step="0.05" type="number" /></label></>}
+          <form className="grid gap-3 sm:grid-cols-3" onSubmit={openAuction}>
+            <div className="rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Automatic reserve · 75%</p><p className="mt-1 text-sm font-medium tabular-nums">{(receivable.faceValue * 0.75).toFixed(6)} aUSDC</p></div><label className="text-xs text-muted-foreground">Duration (hours)<Input className="mt-1" name="duration" required min="0.05" step="0.05" defaultValue="24" /></label>
             <div className="flex items-end"><Button className="w-full" loading={busy === "Auction opening"} type="submit">Open auction</Button></div>
           </form>
         ) : null}
-        {receivable.status === "Auction open" ? (
+        {auctionAcceptingBids ? (
           <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={bid}>
-            {DEMO_MODE ? <><input name="bid" type="hidden" value={(receivable.faceValue * 0.9).toFixed(6)} /><div className="flex-1 rounded-lg bg-muted/50 p-3"><p className="text-sm font-medium">Private bid ready</p><p className="mt-1 text-xs text-muted-foreground">Encrypted in your browser with Inco before submission.</p></div></> : <label className="flex-1 text-xs text-muted-foreground">Private bid (aUSDC)<Input className="mt-1" name="bid" required step="0.000001" type="number" /></label>}
+            <label className="flex-1 text-xs text-muted-foreground">Private bid (aUSDC)<Input className="mt-1" name="bid" required step="0.000001" type="number" /></label>
             <div className="flex items-end"><Button loading={busy === "Encrypted bid"} type="submit">Encrypt & submit bid</Button></div>
           </form>
         ) : null}
-        {receivable.status === "Auction closed" && isFinancier ? <Button loading={busy === "Funding"} onClick={fund}>Approve aUSDC & fund seller</Button> : null}
-        {receivable.status === "Funded" && isBuyer ? <Button loading={busy === "Repayment"} onClick={repay}>Approve aUSDC & repay financier</Button> : null}
+        {receivable.status === "Auction open" && !auctionAcceptingBids ? <Button loading={busy === "Winner reveal"} onClick={revealWinner}>{receivable.auctionRevealRequested ? "Finalize winner" : "Close bidding"}</Button> : null}
+        {receivable.status === "Auction closed" && isFinancier ? approvalReady === false ? <Button loading={busy === "aUSDC approval"} onClick={approveFunding}>Approve {receivable.advance?.toFixed(6)} aUSDC</Button> : <Button loading={busy === "Funding"} disabled={approvalReady === undefined} onClick={fund}>Fund seller</Button> : null}
+        {receivable.status === "Funded" && isBuyer ? approvalReady === false ? <Button loading={busy === "aUSDC approval"} onClick={approveRepayment}>Approve {receivable.faceValue.toFixed(6)} aUSDC</Button> : <Button loading={busy === "Repayment"} disabled={approvalReady === undefined} onClick={repay}>Repay financier</Button> : null}
       </div>
       <ActionStatus hash={hash} message={message} />
     </section>

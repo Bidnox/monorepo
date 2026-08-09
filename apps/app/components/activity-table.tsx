@@ -44,8 +44,8 @@ export function ActivityTable({ activity }: { activity: ActivityRow[] }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={`${row.event}-${row.receivable}`}>
+                {rows.map((row, index) => (
+                  <TableRow key={`${row.transaction}-${row.event}-${index}`}>
                     <TableCell className="font-medium">{row.event}</TableCell>
                     <TableCell>{row.receivable}</TableCell>
                     <TableCell>

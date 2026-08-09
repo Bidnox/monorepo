@@ -6,8 +6,6 @@ import { getReceivables } from "@/lib/server/bidnox"
 export const dynamic = "force-dynamic"
 
 export default async function OverviewPage() {
-  if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") redirect("/receivables")
-
   const receivables = await getReceivables()
   const metrics = [
     {
@@ -79,4 +77,3 @@ export default async function OverviewPage() {
     </div>
   )
 }
-import { redirect } from "next/navigation"

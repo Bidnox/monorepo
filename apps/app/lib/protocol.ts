@@ -41,6 +41,7 @@ export const receivableComponents = [
 ] as const
 
 export const registryAbi = [
+  { type: "error", name: "ERC20InsufficientAllowance", inputs: [{ name: "spender", type: "address" }, { name: "allowance", type: "uint256" }, { name: "needed", type: "uint256" }] },
   { type: "function", name: "computeFingerprint", stateMutability: "pure", inputs: [{ name: "seller", type: "address" }, { name: "input", type: "tuple", components: receivableInputComponents }], outputs: [{ name: "", type: "bytes32" }] },
   { type: "function", name: "computeReceivableId", stateMutability: "view", inputs: [{ name: "fingerprint", type: "bytes32" }], outputs: [{ name: "", type: "bytes32" }] },
   { type: "function", name: "getReceivable", stateMutability: "view", inputs: [{ name: "receivableId", type: "bytes32" }], outputs: [{ name: "", type: "tuple", components: receivableComponents }] },
@@ -53,6 +54,14 @@ export const registryAbi = [
 export const auctionAbi = [
   { type: "function", name: "createAuction", stateMutability: "nonpayable", inputs: [{ name: "receivableId", type: "bytes32" }, { name: "closesAt", type: "uint64" }, { name: "reserveAmount", type: "uint256" }], outputs: [{ name: "auctionId", type: "uint256" }] },
   { type: "function", name: "submitBid", stateMutability: "payable", inputs: [{ name: "auctionId", type: "uint256" }, { name: "encryptedBid", type: "bytes" }, { name: "permit", type: "tuple", components: compliancePermitComponents }, { name: "complianceSignature", type: "bytes" }], outputs: [] },
+  { type: "function", name: "hasBid", stateMutability: "view", inputs: [{ name: "auctionId", type: "uint256" }, { name: "bidder", type: "address" }], outputs: [{ name: "", type: "bool" }] },
+  { type: "function", name: "bidderCount", stateMutability: "view", inputs: [{ name: "auctionId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "closeAuction", stateMutability: "nonpayable", inputs: [{ name: "auctionId", type: "uint256" }], outputs: [] },
+  { type: "function", name: "finalizeAuction", stateMutability: "nonpayable", inputs: [
+    { name: "auctionId", type: "uint256" }, { name: "revealedHighestBid", type: "uint256" }, { name: "revealedWinningIndex", type: "uint256" },
+    { name: "bidAttestation", type: "tuple", components: [{ name: "handle", type: "bytes32" }, { name: "value", type: "bytes32" }] }, { name: "bidSignatures", type: "bytes[]" },
+    { name: "winnerAttestation", type: "tuple", components: [{ name: "handle", type: "bytes32" }, { name: "value", type: "bytes32" }] }, { name: "winnerSignatures", type: "bytes[]" },
+  ], outputs: [] },
   { type: "function", name: "getAuction", stateMutability: "view", inputs: [{ name: "auctionId", type: "uint256" }], outputs: [{ name: "", type: "tuple", components: [
     { name: "receivableId", type: "bytes32" }, { name: "opensAt", type: "uint64" },
     { name: "closesAt", type: "uint64" }, { name: "reserveAmount", type: "uint256" },
@@ -63,6 +72,7 @@ export const auctionAbi = [
 ] as const
 
 export const erc20Abi = [
+  { type: "error", name: "ERC20InsufficientAllowance", inputs: [{ name: "spender", type: "address" }, { name: "allowance", type: "uint256" }, { name: "needed", type: "uint256" }] },
   { type: "function", name: "approve", stateMutability: "nonpayable", inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ name: "", type: "bool" }] },
   { type: "function", name: "allowance", stateMutability: "view", inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
 ] as const
@@ -123,29 +133,16 @@ export const registryDomain = {
   verifyingContract: getAddress(BIDNOX_BASE_SEPOLIA.receivableRegistry),
 } as const
 
-export function permitRequestMessage(caller: Address, action: PermitAction, subjectId: Hex, issuedAt: number) {
+export function walletSessionMessage(caller: Address, nonce: string, expiresAt: number) {
   return [
-    "Authorize Bidnox compliance check",
+    "Sign in to Bidnox",
+    "This request does not submit a transaction or cost gas.",
     `Chain: ${BIDNOX_BASE_SEPOLIA.chainId}`,
-    `Caller: ${getAddress(caller)}`,
-    `Action: ${action}`,
-    `Subject: ${subjectId}`,
-    `Issued at: ${issuedAt}`,
+    `Wallet: ${getAddress(caller)}`,
+    `Nonce: ${nonce}`,
+    `Expires: ${new Date(expiresAt).toISOString()}`,
   ].join("\n")
 }
-
-export function invoiceUploadRequestMessage(caller: Address, issuedAt: number) {
-  return [
-    "Authorize Bidnox invoice upload",
-    `Chain: ${BIDNOX_BASE_SEPOLIA.chainId}`,
-    `Caller: ${getAddress(caller)}`,
-    `Issued at: ${issuedAt}`,
-  ].join("\n")
-}
-
-export const DEMO_DOCUMENT_HASH = keccak256(
-  stringToHex("bidnox-demo-invoice-document-v1")
-)
 
 export function deserializePermit(value: Record<string, string>): CompliancePermit {
   return {
