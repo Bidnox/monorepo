@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="850" height="1130" viewBox="0 0 850 1130">
+  <rect width="850" height="1130" fill="#121315"/>
+  <g font-family="Comic Sans MS, Segoe Print, cursive" stroke-linecap="round" stroke-linejoin="round">
+    <text x="92" y="78" fill="#f4f1e8" font-size="38" font-weight="700">architecture</text>
+    <path d="M93 94 C177 98, 268 91, 352 95" fill="none" stroke="#f4f1e8" stroke-width="2.4"/>
+
+    <!-- cards -->
+    <g stroke-width="2.3">
+      <path d="M126 139 C123 134, 128 130, 135 131 L715 130 C722 131, 726 136, 724 143 L725 240 C724 247, 719 251, 712 250 L135 251 C128 250, 124 246, 126 238Z" fill="#1d1f22" stroke="#dad7cf"/>
+      <path d="M126 304 C123 299, 128 295, 135 296 L715 295 C722 296, 726 301, 724 308 L725 405 C724 412, 719 416, 712 415 L135 416 C128 415, 124 411, 126 403Z" fill="#14241f" stroke="#34b98a"/>
+      <path d="M126 469 C123 464, 128 460, 135 461 L715 460 C722 461, 726 466, 724 473 L725 570 C724 577, 719 581, 712 580 L135 581 C128 580, 124 576, 126 568Z" fill="#1d1f22" stroke="#dad7cf"/>
+      <path d="M126 634 C123 629, 128 625, 135 626 L715 625 C722 626, 726 631, 724 638 L725 735 C724 742, 719 746, 712 745 L135 746 C128 745, 124 741, 126 733Z" fill="#152036" stroke="#5686f7"/>
+      <path d="M126 799 C123 794, 128 790, 135 791 L715 790 C722 791, 726 796, 724 803 L725 900 C724 907, 719 911, 712 910 L135 911 C128 910, 124 906, 126 898Z" fill="#292313" stroke="#d2a02e"/>
+      <path d="M126 964 C123 959, 128 955, 135 956 L715 955 C722 956, 726 961, 724 968 L725 1065 C724 1072, 719 1076, 712 1075 L135 1076 C128 1075, 124 1071, 126 1063Z" fill="#292313" stroke="#d2a02e"/>
+    </g>
+
+    <!-- step numbers -->
+    <g fill="#121315" stroke="#dad7cf" stroke-width="2" font-size="17" font-weight="700" text-anchor="middle">
+      <circle cx="162" cy="190" r="20"/><text x="162" y="196" fill="#f4f1e8" stroke="none">1</text>
+      <circle cx="162" cy="355" r="20" stroke="#34b98a"/><text x="162" y="361" fill="#60d5ac" stroke="none">2</text>
+      <circle cx="162" cy="520" r="20"/><text x="162" y="526" fill="#f4f1e8" stroke="none">3</text>
+      <circle cx="162" cy="685" r="20" stroke="#5686f7"/><text x="162" y="691" fill="#75a0ff" stroke="none">4</text>
+      <circle cx="162" cy="850" r="20" stroke="#d2a02e"/><text x="162" y="856" fill="#edc45f" stroke="none">5</text>
+      <circle cx="162" cy="1015" r="20" stroke="#d2a02e"/><text x="162" y="1021" fill="#edc45f" stroke="none">6</text>
+    </g>
+
+    <!-- actual Cleanverse mark -->
+    <g transform="translate(205 335) scale(.039)" fill="#60d5ac">
+      <path d="M525.136 10.7442C741.699 10.7442 926.177 148.114 996.189 340.471C1010.04 378.531 979.419 415.703 938.916 415.703C909.663 415.703 884.615 395.725 873.482 368.674C817.13 231.745 682.391 135.345 525.136 135.345C317.182 135.345 148.602 303.925 148.602 511.88C148.602 719.834 317.182 888.415 525.136 888.415C682.39 888.415 817.129 792.015 873.481 655.087C884.614 628.035 909.662 608.058 938.915 608.058C979.418 608.058 1010.04 645.23 996.188 683.29C926.175 875.646 741.699 1013.02 525.136 1013.02C248.366 1013.02 24.0002 788.649 24.0002 511.88C24.0003 235.11 248.367 10.7444 525.136 10.7442Z"/>
+      <path d="M525.134 213.223C632.492 213.223 726.619 269.869 779.258 354.904C802.816 392.962 770.294 435.949 725.534 435.949C699.322 435.949 676.278 420.14 659.495 400.005C627.424 361.53 579.139 337.044 525.134 337.044C428.576 337.044 350.299 415.32 350.299 511.879C350.299 608.438 428.576 686.714 525.134 686.714C580.712 686.714 630.231 660.781 662.254 620.355C678.893 599.35 702.28 582.746 729.078 582.746C772.999 582.746 805.293 624.527 783.119 662.44C731.306 751.029 635.17 810.536 525.134 810.536C360.191 810.536 226.478 676.822 226.478 511.879C226.478 346.936 360.191 213.223 525.134 213.223Z"/>
+    </g>
+
+    <!-- actual Inco mark -->
+    <g transform="translate(205 665) scale(.2)">
+      <path d="M0 32C0 14.3269 14.2886 0 31.9145 0H167.551C185.177 0 199.466 14.3269 199.466 32V168C199.466 185.673 185.177 200 167.551 200H31.9145C14.2886 200 0 185.673 0 168V32Z" fill="#3673F5"/>
+      <path d="M37.8986 138L58.0047 62H79.786L59.6802 138H37.8986ZM79.786 138L99.893 62H121.674L101.568 138H79.786ZM121.674 138L141.78 62H163.562L143.456 138H121.674Z" fill="white"/>
+    </g>
+
+    <!-- labels -->
+    <g fill="#f4f1e8">
+      <text x="205" y="183" font-size="22" font-weight="700">Create</text>
+      <text x="205" y="216" font-size="17" fill="#aaa7a0">seller · invoice + buyer</text>
+
+      <text x="260" y="348" font-size="22" font-weight="700" fill="#60d5ac">Cleanverse</text>
+      <text x="260" y="381" font-size="17" fill="#8dbdab">check seller + buyer A-Pass</text>
+
+      <text x="205" y="513" font-size="22" font-weight="700">Confirm</text>
+      <text x="205" y="546" font-size="17" fill="#aaa7a0">buyer · sign invoice</text>
+
+      <text x="260" y="678" font-size="22" font-weight="700" fill="#75a0ff">Inco</text>
+      <text x="260" y="711" font-size="17" fill="#9bb5ee">sealed bids · select winner</text>
+
+      <text x="205" y="843" font-size="22" font-weight="700">Fund</text>
+      <text x="205" y="876" font-size="17" fill="#cdbd90">winning lender · aUSDC → seller</text>
+
+      <text x="205" y="1008" font-size="22" font-weight="700">Repay</text>
+      <text x="205" y="1041" font-size="17" fill="#cdbd90">buyer · aUSDC → lender</text>
+    </g>
+
+    <!-- arrows stay between cards -->
+    <g fill="none" stroke="#dad7cf" stroke-width="2.4">
+      <path d="M425 251 C424 267, 426 282, 425 295 M417 286 L425 296 L433 286"/>
+      <path d="M425 416 C424 432, 426 447, 425 460 M417 451 L425 461 L433 451"/>
+      <path d="M425 581 C424 597, 426 612, 425 625 M417 616 L425 626 L433 616"/>
+      <path d="M425 746 C424 762, 426 777, 425 790 M417 781 L425 791 L433 781"/>
+      <path d="M425 911 C424 927, 426 942, 425 955 M417 946 L425 956 L433 946"/>
+    </g>
+  </g>
+</svg>

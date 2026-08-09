@@ -14,6 +14,8 @@ The idea is simple: a supplier should be able to find the best advance for a buy
 
 ## How it works
 
+![Bidnox architecture](docs/submission/bidnox-flow.excalidraw.svg)
+
 1. **The supplier creates a receivable.** The demo publishes the invoice file to IPFS through Pinata and anchors a CID-derived commitment alongside the face value, buyer, due date and settlement asset.
 2. **The buyer confirms the terms.** The buyer signs the exact receivable, so a supplier cannot auction an unacknowledged invoice.
 3. **The supplier opens an auction.** The auction has a closing time and a minimum acceptable advance.
