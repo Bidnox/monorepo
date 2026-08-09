@@ -39,22 +39,22 @@
     <!-- labels -->
     <g fill="#f4f1e8">
       <text x="205" y="183" font-size="22" font-weight="700">Create</text>
-      <text x="205" y="216" font-size="17" fill="#aaa7a0">seller · invoice + buyer</text>
+      <text x="205" y="216" font-size="17" fill="#aaa7a0">seller, invoice + buyer</text>
 
       <text x="260" y="348" font-size="22" font-weight="700" fill="#60d5ac">Cleanverse</text>
       <text x="260" y="381" font-size="17" fill="#8dbdab">check seller + buyer A-Pass</text>
 
       <text x="205" y="513" font-size="22" font-weight="700">Confirm</text>
-      <text x="205" y="546" font-size="17" fill="#aaa7a0">buyer · sign invoice</text>
+      <text x="205" y="546" font-size="17" fill="#aaa7a0">buyer, sign invoice</text>
 
       <text x="260" y="678" font-size="22" font-weight="700" fill="#75a0ff">Inco</text>
-      <text x="260" y="711" font-size="17" fill="#9bb5ee">sealed bids · select winner</text>
+      <text x="260" y="711" font-size="17" fill="#9bb5ee">sealed bids, select winner</text>
 
       <text x="205" y="843" font-size="22" font-weight="700">Fund</text>
-      <text x="205" y="876" font-size="17" fill="#cdbd90">winning lender · aUSDC → seller</text>
+      <text x="205" y="876" font-size="17" fill="#cdbd90">winning lender, aUSDC → seller</text>
 
       <text x="205" y="1008" font-size="22" font-weight="700">Repay</text>
-      <text x="205" y="1041" font-size="17" fill="#cdbd90">buyer · aUSDC → lender</text>
+      <text x="205" y="1041" font-size="17" fill="#cdbd90">buyer, aUSDC → lender</text>
     </g>
 
     <!-- arrows stay between cards -->

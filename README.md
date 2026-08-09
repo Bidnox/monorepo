@@ -1,7 +1,7 @@
 # Bidnox
 
 <p>
-  <a href="https://www.cleanverse.com/"><img src="apps/app/public/integrations/cleanverse.svg" alt="Cleanverse" width="52" height="52" /></a>
+  <a href="https://www.cleanverse.com/"><img src="docs/submission/cleanverse-readme.svg" alt="Cleanverse" width="52" height="52" /></a>
   &nbsp;&nbsp;&nbsp;
   <a href="https://www.inco.org/"><img src="apps/app/public/inco-mark.svg" alt="Inco" width="44" height="44" /></a>
 </p>
@@ -11,6 +11,21 @@
 Bidnox is an invoice-financing marketplace where verified financiers compete to fund a supplier without seeing one another's offers.
 
 The idea is simple: a supplier should be able to find the best advance for a buyer-confirmed invoice without emailing the same financial terms to a room full of lenders. Bidnox keeps every bid encrypted while the auction is open, reveals only the winning financier and winning amount when it closes, and settles the financing and repayment in Cleanverse aUSDC on Base Sepolia.
+
+[Website](https://bidnox.xyz) | [Open the app](https://app.bidnox.xyz) | [View deployed contracts](#base-sepolia-deployment)
+
+> Built for the DeFi track of Cleanverse Build: Trusted Assets. Bidnox uses Cleanverse CVI and CVA in the real financing flow.
+
+## Hackathon submission
+
+| Item | Link |
+| --- | --- |
+| Public repository | [Bidnox monorepo](https://github.com/Bidnox/monorepo) |
+| Live product | [app.bidnox.xyz](https://app.bidnox.xyz) |
+| One-page summary | [Read the summary](docs/submission/one-page-summary.md) |
+| Demo evidence | [Review the transactions](docs/submission/demo-evidence.md) |
+| Demo video | **TODO: add the final video link** |
+| Deployed chain | Base Sepolia, chain ID `84532` |
 
 ## How it works
 
@@ -26,7 +41,7 @@ The idea is simple: a supplier should be able to find the best advance for a buy
 
 Every important write produces a Base Sepolia transaction that the app links from the receivable and its evidence page.
 
-## What is private—and what is not
+## What is private and what is public
 
 Bidnox is deliberately precise about its privacy guarantees.
 
@@ -47,9 +62,12 @@ This is sealed-bid financing, not anonymous financing or private document storag
 
 ## Cleanverse comes first
 
-Cleanverse is the compliance and settlement layer. The server checks A-Pass eligibility and issues a short-lived EIP-712 permit bound to one wallet, action, receivable and asset. Contracts consume those permits for creation, buyer confirmation, bidding, funding and repayment. API credentials and the compliance signing key never reach the browser.
+Cleanverse is the compliance and settlement layer.
 
-Cleanverse also provides the aUSDC used for both legs of the transaction: the financier pays the winning advance to the supplier, and the buyer later repays the invoice face value to the financier.
+- **CVI and A-Pass:** The server checks participant eligibility and issues a short-lived EIP-712 permit bound to one wallet, action, receivable and asset. Contracts consume these permits during creation, confirmation, bidding, funding and repayment.
+- **CVA and aUSDC:** The winning financier pays the supplier in Cleanverse aUSDC. The buyer later repays the financier with the same asset.
+
+API credentials and the compliance signing key stay on the server and never reach the browser.
 
 ### Confidential bidding with Inco
 

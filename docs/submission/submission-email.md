@@ -4,10 +4,10 @@ Hi Cleanverse team,
 
 Please find our submission for the DeFi track: **Bidnox, compliant confidential receivables financing**.
 
-- Public GitHub: [add URL]
-- Live frontend: [add URL]
-- Demo video: [add URL]
-- One-page summary: `docs/submission/one-page-summary.md`
+- Public GitHub: https://github.com/Bidnox/monorepo
+- Live frontend: https://app.bidnox.xyz
+- Demo video: TODO: add the final video URL
+- One-page summary: https://github.com/Bidnox/monorepo/blob/main/docs/submission/one-page-summary.md
 - Deployed chain: Base Sepolia (`84532`)
 - ComplianceGate: `0x12badb8fd1828AB70Ea5FD4F5142Bc8c9e8f537d`
 - ReceivableRegistry: `0xCad5d39Dc42757969323608a9207B283dbDE3b37`
