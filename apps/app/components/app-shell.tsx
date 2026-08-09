@@ -18,10 +18,6 @@ import { useDisconnect } from "wagmi"
 
 import { Logo } from "@/components/logo"
 import {
-  type AppRole,
-  RoleOnboarding,
-} from "@/components/role-onboarding"
-import {
   CleanverseStatus,
   CopyableAddress,
 } from "@/components/receivable-primitives"
@@ -48,28 +44,16 @@ import { Switch } from "@/components/ui/switch"
 import { ToastProvider } from "@/components/ui/toast"
 import { baseSepolia } from "@/lib/wagmi"
 
-const NAVIGATION = {
-  supplier: [
-    { href: "/", label: "Overview", icon: LayoutDashboard, exact: true },
-    {
-      href: "/receivables",
-      label: "Receivables",
-      icon: Files,
-      exact: false,
-    },
-    { href: "/activity", label: "Activity", icon: Activity, exact: false },
-  ],
-  financier: [
-    { href: "/", label: "Overview", icon: LayoutDashboard, exact: true },
-    {
-      href: "/receivables",
-      label: "Opportunities",
-      icon: Files,
-      exact: false,
-    },
-    { href: "/activity", label: "Activity", icon: Activity, exact: false },
-  ],
-} as const
+const NAVIGATION = [
+  { href: "/", label: "Overview", icon: LayoutDashboard, exact: true },
+  {
+    href: "/receivables",
+    label: "Receivables",
+    icon: Files,
+    exact: false,
+  },
+  { href: "/activity", label: "Activity", icon: Activity, exact: false },
+] as const
 
 const subscribe = () => () => undefined
 const getClientSnapshot = () => true
@@ -81,14 +65,12 @@ function shortAddress(address: string) {
 
 export function AppSidebar({
   walletAddress,
-  role,
   wrongNetwork,
   onConnect,
   onSwitchNetwork,
   onDisconnect,
 }: {
   walletAddress: string | null
-  role: AppRole | null
   wrongNetwork: boolean
   onConnect: () => void
   onSwitchNetwork: () => void
@@ -115,7 +97,7 @@ export function AppSidebar({
         <SidebarGroup className="px-3">
           <SidebarGroupContent>
             <SidebarMenu>
-              {(role ? NAVIGATION[role] : NAVIGATION.supplier).map((item) => {
+              {NAVIGATION.map((item) => {
                 const active =
                   item.href === "/receivables"
                     ? pathname === item.href || pathname.startsWith(`${item.href}/`)
@@ -282,46 +264,12 @@ function AppExperience({
   onSwitchNetwork: () => void
   onDisconnect: () => void
 }) {
-  const [selection, setSelection] = React.useState<{
-    wallet: string
-    role: AppRole | null
-  } | null>(null)
-
-  React.useEffect(() => {
-    if (!walletAddress) return
-
-    const wallet = walletAddress.toLowerCase()
-    const roleTimer = window.setTimeout(() => {
-      const savedRole = window.localStorage.getItem(`bidnox-role:${wallet}`)
-      setSelection({
-        wallet,
-        role:
-          savedRole === "supplier" || savedRole === "financier"
-            ? savedRole
-            : null,
-      })
-    }, 0)
-
-    return () => window.clearTimeout(roleTimer)
-  }, [walletAddress])
-
-  const walletKey = walletAddress?.toLowerCase() ?? null
-  const roleReady = !walletKey || selection?.wallet === walletKey
-  const role = roleReady ? (selection?.role ?? null) : null
-
-  function selectRole(nextRole: AppRole) {
-    if (!walletKey) return
-    window.localStorage.setItem(`bidnox-role:${walletKey}`, nextRole)
-    setSelection({ wallet: walletKey, role: nextRole })
-  }
-
   return (
     <SidebarProvider
       style={{ "--sidebar-width": "14.5rem" } as React.CSSProperties}
     >
       <AppSidebar
         walletAddress={walletAddress}
-        role={role}
         wrongNetwork={wrongNetwork}
         onConnect={onConnect}
         onSwitchNetwork={onSwitchNetwork}
@@ -341,11 +289,7 @@ function AppExperience({
             />
           ) : wrongNetwork ? (
             <NetworkSwitchGate onAction={onSwitchNetwork} />
-          ) : !roleReady ? null : !role ? (
-            <RoleOnboarding onSelect={selectRole} />
-          ) : (
-            children
-          )}
+          ) : children}
         </div>
       </SidebarInset>
     </SidebarProvider>
