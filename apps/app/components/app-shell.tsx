@@ -7,9 +7,7 @@ import { usePathname } from "next/navigation"
 import { useTheme } from "next-themes"
 import {
   Activity,
-  Factory,
   Files,
-  Landmark,
   LayoutDashboard,
   LogOut,
   Moon,
@@ -310,18 +308,11 @@ function AppExperience({
   const walletKey = walletAddress?.toLowerCase() ?? null
   const roleReady = !walletKey || selection?.wallet === walletKey
   const role = roleReady ? (selection?.role ?? null) : null
-  const RoleIcon = role === "supplier" ? Factory : Landmark
 
   function selectRole(nextRole: AppRole) {
     if (!walletKey) return
     window.localStorage.setItem(`bidnox-role:${walletKey}`, nextRole)
     setSelection({ wallet: walletKey, role: nextRole })
-  }
-
-  function changeRole() {
-    if (!walletKey) return
-    window.localStorage.removeItem(`bidnox-role:${walletKey}`)
-    setSelection({ wallet: walletKey, role: null })
   }
 
   return (
@@ -337,26 +328,8 @@ function AppExperience({
         onDisconnect={onDisconnect}
       />
       <SidebarInset>
-        <div className="sticky top-0 z-30 flex h-12 items-center justify-between border-b bg-background/95 px-3 backdrop-blur md:h-14 md:px-8">
-          <div className="md:hidden">
-            <SidebarTrigger />
-          </div>
-          {role && walletAddress && !wrongNetwork ? (
-            <Button
-              variant="ghost"
-              size="xs"
-              className="ml-auto text-muted-foreground hover:text-foreground"
-              onClick={changeRole}
-            >
-              <RoleIcon aria-hidden="true" />
-              <span className="hidden sm:inline">
-                Viewing as <span className="capitalize">{role}</span>
-              </span>
-              <span className="sr-only sm:hidden">
-                Change {role} view
-              </span>
-            </Button>
-          ) : null}
+        <div className="fixed bottom-4 left-4 z-40 rounded-lg border bg-background shadow-md md:hidden">
+          <SidebarTrigger />
         </div>
         <div className="mx-auto w-full max-w-[1240px] flex-1 px-4 py-8 md:px-8 md:py-10">
           {!mounted ? null : !walletAddress ? (
