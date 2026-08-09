@@ -7,7 +7,6 @@ import {
   CalendarDays,
   Check,
   FileText,
-  LockKeyhole,
   Upload,
   X,
 } from "lucide-react"
@@ -19,6 +18,7 @@ import {
   parseUnits,
   stringToHex,
   toHex,
+  zeroAddress,
   type Hex,
 } from "viem"
 import {
@@ -30,7 +30,6 @@ import {
 } from "wagmi"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import {
   Dialog,
@@ -47,9 +46,7 @@ import { Input } from "@/components/ui/input"
 import { Popover, PopoverPopup, PopoverTrigger } from "@/components/ui/popover"
 import { toastManager } from "@/components/ui/toast"
 import {
-  EncryptionProgress,
   PartnerMark,
-  PartnerRoute,
 } from "@/components/partner-mark"
 import type { Receivable } from "@/lib/bidnox"
 import { BIDNOX_BASE_SEPOLIA } from "@/lib/contracts"
@@ -189,17 +186,11 @@ function useTransactions() {
 
 function ActionStatus({ message, hash }: { message?: string; hash?: Hex }) {
   if (!message && !hash) return null
-  const partner = message?.includes("Cleanverse")
-    ? "cleanverse"
-    : message?.includes("Inco")
-      ? "inco"
-      : undefined
   return (
     <p
       className="mt-3 flex flex-wrap items-center gap-1.5 text-xs break-words text-muted-foreground"
       role="status"
     >
-      {partner ? <PartnerMark compact partner={partner} /> : null}
       {message}
       {hash ? (
         <>
@@ -799,7 +790,7 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
       setHash(undefined)
       setTransactionComplete(false)
       const auctionId = BigInt(receivable.auctionId)
-      const auction = await client.readContract({
+      let auction = await client.readContract({
         address: BIDNOX_BASE_SEPOLIA.confidentialAuction,
         abi: auctionAbi,
         functionName: "getAuction",
@@ -814,16 +805,27 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
           args: [auctionId],
         })
         setHash(closeHash)
-        setTransactionComplete(true)
-        setMessage(
-          "Bidding closed. Return when the Inco attestation is ready to finalize the winner."
-        )
-        toastManager.add({ title: "Auction closed", type: "success" })
-        router.refresh()
-        return
+        auction = await client.readContract({
+          address: BIDNOX_BASE_SEPOLIA.confidentialAuction,
+          abi: auctionAbi,
+          functionName: "getAuction",
+          args: [auctionId],
+        })
+        if (auction.finalized) {
+          setHash(closeHash)
+          setTransactionComplete(true)
+          setMessage("Auction closed with no bids.")
+          toastManager.add({ title: "Auction closed", type: "success" })
+          router.refresh()
+          return
+        }
       }
       if (auction.finalized) {
-        setMessage("Auction closed without an eligible winning bid.")
+        setMessage(
+          auction.revealedWinner === zeroAddress
+            ? "Auction ended without a qualifying bid."
+            : "The winner is already finalized."
+        )
         router.refresh()
         return
       }
@@ -1122,10 +1124,7 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
         <DialogPopup showCloseButton={!transactionComplete}>
           {transactionComplete && hash ? (
             <>
-              <DialogHeader>
-                <DialogTitle>Transaction successful</DialogTitle>
-              </DialogHeader>
-              <DialogPanel>
+              <DialogPanel className="pt-6">
                 <a
                   className="text-sm font-medium underline underline-offset-4"
                   href={`${BIDNOX_BASE_SEPOLIA.explorer}/tx/${hash}`}
@@ -1142,37 +1141,22 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
           ) : (
             <>
           <DialogHeader>
-            <div className="mb-1 flex items-center gap-2">
-              <Badge variant="secondary">Next step</Badge>
-              <PartnerRoute />
-            </div>
             <DialogTitle>{actionTitle}</DialogTitle>
             <DialogDescription>{actionDescription}</DialogDescription>
           </DialogHeader>
           <DialogPanel className="space-y-5">
+            <ActionStatus hash={hash} message={message} />
             {sessionReady !== true ? (
-              <div className="space-y-4">
-                <div className="rounded-xl bg-muted/45 p-4">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <PartnerMark partner="cleanverse" />
-                    <span>Verify this wallet</span>
-                  </div>
-                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                    Sign once without gas. This keeps the following action to
-                    one wallet transaction.
-                  </p>
-                </div>
-                <Button
-                  className="w-full"
-                  disabled={sessionReady === undefined}
-                  loading={busy === "Wallet sign-in"}
-                  onClick={authenticateWallet}
-                >
-                  {sessionReady === undefined
-                    ? "Checking session…"
-                    : "Secure wallet session"}
-                </Button>
-              </div>
+              <Button
+                className="w-full"
+                disabled={sessionReady === undefined}
+                loading={busy === "Wallet sign-in"}
+                onClick={authenticateWallet}
+              >
+                {sessionReady === undefined
+                  ? "Checking session…"
+                  : "Verify wallet"}
+              </Button>
             ) : (
               <>
                 {receivable.status === "Awaiting buyer" && isBuyer ? (
@@ -1228,22 +1212,6 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
 
                 {receivable.status === "Buyer confirmed" && isSeller ? (
                   <form className="space-y-4" onSubmit={openAuction}>
-                    <div className="flex items-start gap-3 rounded-xl bg-blue-500/[0.04] p-4 ring-1 ring-blue-500/10 ring-inset">
-                      <PartnerMark
-                        compact
-                        partner="inco"
-                        className="mt-0.5 [&_img]:size-5"
-                      />
-                      <div>
-                        <p className="text-sm font-medium">
-                          Open sealed bidding
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                          Lenders submit encrypted amounts. No leading bid or
-                          ranking is shown while bidding is open.
-                        </p>
-                      </div>
-                    </div>
                     <div className="grid grid-cols-2 gap-3 rounded-xl border p-4">
                       <div>
                         <p className="text-xs text-muted-foreground">
@@ -1288,27 +1256,7 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
                 ) : null}
 
                 {auctionAcceptingBids ? (
-                  busy === "Encrypted bid" ? (
-                    <EncryptionProgress
-                      message={message || "Encrypting your bid"}
-                    />
-                  ) : (
                     <form className="space-y-4" onSubmit={bid}>
-                      <div className="flex items-start gap-3 rounded-xl bg-blue-500/[0.04] p-4 ring-1 ring-blue-500/10 ring-inset">
-                        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-background">
-                          <LockKeyhole className="size-4 text-blue-600" />
-                        </span>
-                        <div>
-                          <PartnerMark
-                            partner="inco"
-                            className="text-sm font-medium"
-                          />
-                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                            The amount is encrypted on this device before any
-                            transaction is created.
-                          </p>
-                        </div>
-                      </div>
                       <Field>
                         <FieldLabel>Private bid</FieldLabel>
                         <Input
@@ -1325,38 +1273,28 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
                           calldata.
                         </FieldDescription>
                       </Field>
-                      <Button className="w-full" type="submit">
-                        Encrypt & submit bid
+                      <Button
+                        className="w-full"
+                        loading={busy === "Encrypted bid"}
+                        type="submit"
+                      >
+                        {busy === "Encrypted bid"
+                          ? "Encrypting & submitting…"
+                          : "Encrypt & submit bid"}
                       </Button>
                     </form>
-                  )
                 ) : null}
 
                 {receivable.status === "Auction open" &&
                 !auctionAcceptingBids ? (
                   <div className="space-y-4">
-                    <div className="rounded-xl bg-muted/40 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <PartnerMark
-                          partner="inco"
-                          className="text-sm font-medium"
-                        />
-                        <Badge variant="outline">
-                          {receivable.auctionRevealRequested
-                            ? "Step 2 of 2"
-                            : "Step 1 of 2"}
-                        </Badge>
-                      </div>
-                      <p className="mt-3 text-sm font-medium">
+                    <div className="flex items-center justify-between gap-4 border-y py-3 text-sm">
+                      <span className="text-muted-foreground">Action</span>
+                      <span className="font-medium">
                         {receivable.auctionRevealRequested
-                          ? "Finalize the attested winner"
-                          : "Stop accepting new bids"}
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        {receivable.auctionRevealRequested
-                          ? "Submit the TEE attestation. Only the winner and winning amount become public; every losing bid stays sealed."
-                          : "This transaction closes bidding and requests the encrypted winner handles for attestation. It does not reveal bid amounts."}
-                      </p>
+                          ? "Finalize winner"
+                          : "Close and finalize"}
+                      </span>
                     </div>
                     <Button
                       className="w-full"
@@ -1365,33 +1303,20 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
                     >
                       {receivable.auctionRevealRequested
                         ? "Finalize winner"
-                        : "Close bidding"}
+                        : "Close bidding & finalize"}
                     </Button>
                   </div>
                 ) : null}
 
                 {receivable.status === "Auction closed" && isFinancier ? (
                   <div className="space-y-4">
-                    <div className="rounded-xl bg-muted/40 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <PartnerMark
-                          partner="cleanverse"
-                          className="text-sm font-medium"
-                        />
-                        <Badge variant="outline">
-                          {approvalReady ? "Step 2 of 2" : "Step 1 of 2"}
-                        </Badge>
-                      </div>
-                      <p className="mt-3 text-sm font-medium">
-                        {approvalReady === false
-                          ? "Approve the funding amount"
-                          : "Send funding to the seller"}
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        {approvalReady === false
-                          ? `Allow the registry to transfer ${receivable.advance?.toFixed(6)} aUSDC. This approval does not move funds.`
-                          : "Verify the financier and seller, then transfer the winning amount to the seller."}
-                      </p>
+                    <div className="flex items-center justify-between gap-4 border-y py-3 text-sm">
+                      <span className="text-muted-foreground">
+                        Funding amount
+                      </span>
+                      <span className="font-medium tabular-nums">
+                        {receivable.advance?.toFixed(6)} aUSDC
+                      </span>
                     </div>
                     {approvalReady === false ? (
                       <Button
@@ -1418,26 +1343,13 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
 
                 {receivable.status === "Funded" && isBuyer ? (
                   <div className="space-y-4">
-                    <div className="rounded-xl bg-muted/40 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <PartnerMark
-                          partner="cleanverse"
-                          className="text-sm font-medium"
-                        />
-                        <Badge variant="outline">
-                          {approvalReady ? "Step 2 of 2" : "Step 1 of 2"}
-                        </Badge>
-                      </div>
-                      <p className="mt-3 text-sm font-medium">
-                        {approvalReady === false
-                          ? "Approve the repayment amount"
-                          : "Send repayment to the financier"}
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        {approvalReady === false
-                          ? `Allow the registry to transfer ${receivable.faceValue.toFixed(6)} aUSDC. This approval does not move funds.`
-                          : "Verify the buyer and financier, then transfer the face value to the winning financier."}
-                      </p>
+                    <div className="flex items-center justify-between gap-4 border-y py-3 text-sm">
+                      <span className="text-muted-foreground">
+                        Repayment amount
+                      </span>
+                      <span className="font-medium tabular-nums">
+                        {receivable.faceValue.toFixed(6)} aUSDC
+                      </span>
                     </div>
                     {approvalReady === false ? (
                       <Button
@@ -1463,7 +1375,6 @@ export function ReceivableActions({ receivable }: { receivable: Receivable }) {
                 ) : null}
               </>
             )}
-            <ActionStatus hash={hash} message={message} />
           </DialogPanel>
             </>
           )}
