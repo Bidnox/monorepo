@@ -382,7 +382,7 @@ export async function getReceivableById(
       dueShort: date(value.dueDate, true),
       status: statusNames[Number(value.status)],
       documentName: `Commitment ${shortAddress(value.documentHash)}`,
-      documentSize: "Private file stored offchain; hash anchored onchain",
+      documentSize: "Public IPFS file; commitment anchored onchain",
       documentHash: value.documentHash,
       fingerprint: value.fingerprint,
       bidders: Number(bidders),

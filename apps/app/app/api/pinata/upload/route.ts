@@ -57,13 +57,22 @@ export async function POST(request: Request) {
       body: pinataForm,
       signal: AbortSignal.timeout(30_000),
     })
-    const result = await pinataResponse.json() as {
+    const responseBody = await pinataResponse.text()
+    let result: {
       data?: { cid?: string; id?: string; size?: number; mime_type?: string }
       error?: string
+    } = {}
+    if (responseBody.trim()) {
+      try {
+        result = JSON.parse(responseBody) as typeof result
+      } catch {
+        // The client receives a stable JSON error below even if Pinata returns
+        // an empty or non-JSON upstream response.
+      }
     }
     const cid = result.data?.cid
     if (!pinataResponse.ok || !cid) {
-      console.error("Pinata upload failed", pinataResponse.status, result.error || "missing CID")
+      console.error("Pinata upload failed", pinataResponse.status)
       return Response.json({ error: "Pinata upload failed." }, { status: 502 })
     }
 

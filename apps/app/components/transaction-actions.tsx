@@ -66,6 +66,25 @@ import {
 } from "@/lib/protocol"
 
 type IssuedPermit = { permit: Record<string, string>; signature: Hex }
+type ApiResult = { error?: string }
+
+async function responseJson<T extends ApiResult>(response: Response) {
+  const body = await response.text()
+  if (!body.trim()) return {} as T
+  try {
+    return JSON.parse(body) as T
+  } catch {
+    return {} as T
+  }
+}
+
+function responseError(
+  response: Response,
+  result: ApiResult,
+  fallback: string
+) {
+  return result.error || `${fallback} (HTTP ${response.status}).`
+}
 
 function errorMessage(error: unknown) {
   if (error instanceof Error) return error.message.split("\n")[0]
@@ -99,21 +118,23 @@ function useTransactions() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ address }),
     })
-    const challenge = (await challengeResponse.json()) as {
+    const challenge = await responseJson<{
       message?: string
       error?: string
-    }
+    }>(challengeResponse)
     if (!challengeResponse.ok || !challenge.message)
-      throw new Error(challenge.error || "Unable to start wallet sign-in.")
+      throw new Error(
+        responseError(challengeResponse, challenge, "Unable to start wallet sign-in")
+      )
     const signature = await signMessageAsync({ message: challenge.message })
     const verification = await fetch("/api/auth/verify", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ address, signature }),
     })
-    const result = (await verification.json()) as { error?: string }
+    const result = await responseJson<{ error?: string }>(verification)
     if (!verification.ok)
-      throw new Error(result.error || "Wallet sign-in failed.")
+      throw new Error(responseError(verification, result, "Wallet sign-in failed"))
   }
 
   async function issuePermits(
@@ -128,12 +149,14 @@ function useTransactions() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ caller: address, action, subjectId, ...extra }),
     })
-    const result = (await response.json()) as {
+    const result = await responseJson<{
       error?: string
       permits?: IssuedPermit[]
-    }
+    }>(response)
     if (!response.ok || !result.permits)
-      throw new Error(result.error || "Compliance permit request failed.")
+      throw new Error(
+        responseError(response, result, "Compliance permit request failed")
+      )
     return result.permits.map((item) => ({
       permit: deserializePermit(item.permit),
       signature: item.signature,
@@ -275,9 +298,9 @@ export function CreateReceivableForm() {
       if (!file || file.size === 0) {
         throw new Error("Choose an invoice document to upload.")
       }
-      setMessage("Signing in once for private upload and compliance checks…")
+      setMessage("Signing in once for upload and compliance checks…")
       await ensureWalletSession()
-      setMessage("Uploading the private invoice to Pinata…")
+      setMessage("Publishing the invoice to IPFS through Pinata…")
       const upload = new FormData()
       upload.set("file", file)
       upload.set("caller", address)
@@ -285,12 +308,12 @@ export function CreateReceivableForm() {
         method: "POST",
         body: upload,
       })
-      const result = (await response.json()) as {
+      const result = await responseJson<{
         documentHash?: Hex
         error?: string
-      }
+      }>(response)
       if (!response.ok || !result.documentHash)
-        throw new Error(result.error || "Invoice upload failed.")
+        throw new Error(responseError(response, result, "Invoice upload failed"))
       const documentHash = result.documentHash
       const input: ReceivableInput = {
         buyer,
@@ -462,7 +485,7 @@ export function CreateReceivableForm() {
                   {file.name}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {(file.size / 1024).toFixed(1)} KB · Private Pinata storage
+                  {(file.size / 1024).toFixed(1)} KB · Public IPFS via Pinata
                 </span>
               </span>
             </span>
